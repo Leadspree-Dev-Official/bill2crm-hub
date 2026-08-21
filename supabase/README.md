@@ -63,8 +63,13 @@ In the **Web App project's** dashboard → Authentication → URL Configuration 
 add:
 
 ```
-https://*.bill2crm.in/auth/callback
+https://*.bill2crm.in/
 ```
+
+(Root path, not a specific route — the Web App's routing is hand-rolled off
+`window.location.pathname` rather than a router with a catch-all, so the SSO handoff redirects
+to `/` and `ssoCallback.ts` consumes the session from the hash fragment before the app's own
+routing ever looks at the path.)
 
 This is required for the magic-link SSO handoff (`launch-app-link`) to be allowed to redirect
 there.

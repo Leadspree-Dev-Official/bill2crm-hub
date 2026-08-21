@@ -38,7 +38,11 @@ Deno.serve(async (req) => {
     }
 
     const rootDomain = Deno.env.get('ROOT_DOMAIN') ?? 'bill2crm.in'
-    const redirectTo = `https://${tenant.subdomain_slug}.${rootDomain}/auth/callback`
+    // Root path, not a specific route: the Web App's routing is hand-rolled off
+    // window.location.pathname (no React Router / catch-all), so redirecting anywhere but "/"
+    // risks landing on an unrecognized path. ssoCallback.ts only reads the hash fragment and
+    // strips it back to pathname + search, so root is also where the user ends up after login.
+    const redirectTo = `https://${tenant.subdomain_slug}.${rootDomain}/`
 
     const { url, serviceRoleKey } = webAppEnv()
     const webApp = createClient(url, serviceRoleKey)
