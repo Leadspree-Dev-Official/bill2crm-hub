@@ -26,6 +26,7 @@ export interface SubscriptionPlan {
   feature_flags: Record<string, unknown>
   is_active: boolean
   sort_order: number
+  web_app_plan_id: string | null
   created_at: string
   updated_at: string
 }

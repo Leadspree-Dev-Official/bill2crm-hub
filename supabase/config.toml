@@ -380,3 +380,16 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# Edge Functions — per-function JWT verification.
+# launch-app-link / admin-purge-tenant are called by authenticated site users (verify_jwt on).
+# sync-tenant-to-webapp is called by a Database Webhook, not a user session, so JWT
+# verification is off there and it instead checks the x-webhook-secret header itself.
+[functions.launch-app-link]
+verify_jwt = true
+
+[functions.admin-purge-tenant]
+verify_jwt = true
+
+[functions.sync-tenant-to-webapp]
+verify_jwt = false

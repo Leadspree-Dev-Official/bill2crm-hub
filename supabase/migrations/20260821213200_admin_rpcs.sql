@@ -93,7 +93,8 @@ create or replace function public.admin_upsert_subscription_plan(
   p_storage_limit_mb integer,
   p_feature_flags jsonb,
   p_is_active boolean,
-  p_sort_order integer
+  p_sort_order integer,
+  p_web_app_plan_id text default null
 )
 returns void
 language plpgsql
@@ -107,11 +108,12 @@ begin
 
   insert into public.subscription_plans (
     id, name, description, price_monthly_inr, price_yearly_inr, price_lifetime_inr,
-    user_limit, storage_limit_mb, feature_flags, is_active, sort_order
+    user_limit, storage_limit_mb, feature_flags, is_active, sort_order, web_app_plan_id
   )
   values (
     p_id, p_name, p_description, p_price_monthly_inr, p_price_yearly_inr, p_price_lifetime_inr,
-    p_user_limit, p_storage_limit_mb, coalesce(p_feature_flags, '{}'::jsonb), p_is_active, p_sort_order
+    p_user_limit, p_storage_limit_mb, coalesce(p_feature_flags, '{}'::jsonb), p_is_active, p_sort_order,
+    p_web_app_plan_id
   )
   on conflict (id) do update set
     name = excluded.name,
@@ -123,7 +125,8 @@ begin
     storage_limit_mb = excluded.storage_limit_mb,
     feature_flags = excluded.feature_flags,
     is_active = excluded.is_active,
-    sort_order = excluded.sort_order;
+    sort_order = excluded.sort_order,
+    web_app_plan_id = excluded.web_app_plan_id;
 
   insert into public.admin_audit_log (actor_user_id, action, payload)
   values (auth.uid(), 'upsert_plan', jsonb_build_object('plan_id', p_id));

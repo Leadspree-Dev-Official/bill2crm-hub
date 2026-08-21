@@ -46,6 +46,7 @@ export async function upsertSubscriptionPlan(plan: {
   featureFlags: Record<string, unknown>
   isActive: boolean
   sortOrder: number
+  webAppPlanId: string | null
 }) {
   const { error } = await supabase.rpc('admin_upsert_subscription_plan', {
     p_id: plan.id,
@@ -59,6 +60,7 @@ export async function upsertSubscriptionPlan(plan: {
     p_feature_flags: plan.featureFlags,
     p_is_active: plan.isActive,
     p_sort_order: plan.sortOrder,
+    p_web_app_plan_id: plan.webAppPlanId,
   })
   return { error: error?.message ?? null }
 }

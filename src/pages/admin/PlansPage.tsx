@@ -24,6 +24,7 @@ const emptyPlan = {
   storage_limit_mb: '',
   is_active: true,
   sort_order: '0',
+  web_app_plan_id: '',
 }
 
 type PlanFormState = typeof emptyPlan
@@ -61,6 +62,7 @@ export default function PlansPage() {
             storage_limit_mb: plan.storage_limit_mb?.toString() ?? '',
             is_active: plan.is_active,
             sort_order: plan.sort_order.toString(),
+            web_app_plan_id: plan.web_app_plan_id ?? '',
           }
         : emptyPlan,
     )
@@ -85,6 +87,7 @@ export default function PlansPage() {
       featureFlags: {},
       isActive: form.is_active,
       sortOrder: Number(form.sort_order) || 0,
+      webAppPlanId: form.web_app_plan_id || null,
     })
     setSaving(false)
 
@@ -170,6 +173,14 @@ export default function PlansPage() {
                 <Input
                   value={form.storage_limit_mb}
                   onChange={(e) => setForm({ ...form, storage_limit_mb: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2 space-y-2">
+                <Label>Web App plan ID</Label>
+                <Input
+                  placeholder="matching plan id in the Bill2CRM Web App project"
+                  value={form.web_app_plan_id}
+                  onChange={(e) => setForm({ ...form, web_app_plan_id: e.target.value })}
                 />
               </div>
               <div className="col-span-2 flex items-center justify-between rounded-md border px-3 py-2">

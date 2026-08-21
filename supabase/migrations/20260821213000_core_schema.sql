@@ -31,6 +31,10 @@ create table public.subscription_plans (
   feature_flags jsonb not null default '{}'::jsonb,
   is_active boolean not null default true,
   sort_order integer not null default 0,
+  -- Corresponding plan_id in the Bill2CRM Web App project's own subscription_plans table.
+  -- The two projects have independent plan-id namespaces; the sync Edge Function uses this
+  -- (falling back to this table's own id) when calling set_tenant_entitlement_atomic there.
+  web_app_plan_id text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
