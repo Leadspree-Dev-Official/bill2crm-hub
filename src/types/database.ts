@@ -1,0 +1,74 @@
+export type TenantStatus = 'trial' | 'active' | 'free' | 'past_due' | 'suspended' | 'cancelled'
+export type BillingCycle = 'monthly' | 'yearly' | 'lifetime'
+export type UpgradeRequestStatus = 'pending' | 'contacted' | 'resolved' | 'dismissed'
+
+export interface Tenant {
+  id: string
+  owner_user_id: string
+  business_name: string
+  subdomain_slug: string
+  web_app_org_id: string | null
+  web_app_email: string | null
+  status: TenantStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  description: string | null
+  price_monthly_inr: number | null
+  price_yearly_inr: number | null
+  price_lifetime_inr: number | null
+  user_limit: number | null
+  storage_limit_mb: number | null
+  feature_flags: Record<string, unknown>
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface TenantSubscription {
+  tenant_id: string
+  plan_id: string
+  status: TenantStatus
+  billing_cycle: BillingCycle | null
+  trial_ends_at: string | null
+  current_period_end: string | null
+  is_lifetime: boolean
+  user_limit_override: number | null
+  storage_limit_override_mb: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SuperAdmin {
+  user_id: string
+  granted_by: string | null
+  granted_at: string
+}
+
+export interface AdminAuditLogEntry {
+  id: string
+  actor_user_id: string | null
+  action: string
+  target_tenant_id: string | null
+  payload: Record<string, unknown>
+  created_at: string
+}
+
+export interface UpgradeRequest {
+  id: string
+  tenant_id: string
+  requested_plan_id: string | null
+  note: string | null
+  status: UpgradeRequestStatus
+  created_at: string
+}
+
+/** Joined view used across the dashboard and admin console. */
+export interface TenantWithSubscription extends Tenant {
+  tenant_subscriptions: TenantSubscription | null
+}
