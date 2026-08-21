@@ -3,6 +3,7 @@ import { AuthProvider } from '@/lib/auth-context'
 import { RequireAuth, RequireSuperAdmin, RedirectIfAuthed } from '@/components/route-guards'
 import { Toaster } from '@/components/ui/sonner'
 import LandingPage from '@/pages/marketing/LandingPage'
+import LegalPage from '@/pages/marketing/LegalPage'
 import SignupPage from '@/pages/auth/SignupPage'
 import LoginPage from '@/pages/auth/LoginPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
@@ -36,6 +37,7 @@ export default function App() {
             }
           />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/legal/:slug" element={<LegalPage />} />
 
           <Route element={<RequireAuth />}>
             <Route path="/dashboard" element={<DashboardPage />} />
