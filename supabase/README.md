@@ -110,10 +110,11 @@ This routes every `*.bill2crm.in` request to the Web App unchanged — see the c
 
 ## 9. Bootstrap the first Super Admin
 
-`supabase/migrations/20260821213300_signup_trigger.sql` grants Super Admin automatically to
-one exact-match email (currently `arnab.xbox@gmail.com`) the moment it signs up on this site
-— sign up with that account first. Every super admin after that is granted from `/admin →
-Super admins` by an existing one, never by email pattern-matching.
+`supabase/migrations/20260821213300_signup_trigger.sql`, retargeted by
+`20260822100000_bootstrap_super_admin_leadspree.sql`, grants Super Admin automatically to one
+exact-match email (currently `leadspree24x7@gmail.com`) the moment it signs up on this site —
+sign up with that account first. Every super admin after that is granted from `/admin → Super
+admins` by an existing one, never by email pattern-matching.
 
 ## Known limitation: purge is not a full data wipe
 
