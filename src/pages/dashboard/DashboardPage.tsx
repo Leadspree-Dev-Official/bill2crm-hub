@@ -1,21 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
-import { supabase } from '@/lib/supabase'
+import { supabase, tenantAppUrl } from '@/lib/supabase'
 import { requestAppLaunchUrl } from '@/lib/api/launch-app'
 import type { SubscriptionPlan } from '@/types/database'
 import { AppNav } from '@/components/app-nav'
 import { UpgradeRequestDialog } from '@/components/upgrade-request-dialog'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
 import { daysRemaining, formatInr, formatLimit, STATUS_BADGE_VARIANT, STATUS_LABEL } from '@/lib/plan-utils'
-import { ExternalLink, Loader2, Rocket } from 'lucide-react'
+import { Check, Copy, ExternalLink, HardDrive, Loader2, Rocket, Users } from 'lucide-react'
 import { toast } from 'sonner'
+import type { LucideIcon } from 'lucide-react'
+
+const BILLING_CYCLE_LABEL: Record<string, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' }
 
 export default function DashboardPage() {
   const { tenant, subscription, loading } = useAuth()
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null)
   const [launching, setLaunching] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!subscription?.plan_id) return
@@ -39,6 +44,13 @@ export default function DashboardPage() {
     window.location.href = url
   }
 
+  async function handleCopyLink() {
+    if (!tenant) return
+    await navigator.clipboard.writeText(tenantAppUrl(tenant.subdomain_slug))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -58,30 +70,60 @@ export default function DashboardPage() {
     )
   }
 
-  const trialDays = subscription?.status === 'trial' ? daysRemaining(subscription.trial_ends_at) : null
+  const isTrial = subscription?.status === 'trial'
+  const trialDays = isTrial ? daysRemaining(subscription.trial_ends_at) : null
+  const trialPct = (() => {
+    if (!isTrial || !subscription?.trial_ends_at || !subscription?.created_at) return 0
+    const start = new Date(subscription.created_at).getTime()
+    const end = new Date(subscription.trial_ends_at).getTime()
+    const elapsed = Date.now() - start
+    const total = end - start
+    if (total <= 0) return 100
+    return Math.min(100, Math.max(0, (elapsed / total) * 100))
+  })()
+
+  const priceLabel = subscription?.is_lifetime
+    ? formatInr(plan?.price_lifetime_inr)
+    : subscription?.billing_cycle === 'yearly'
+      ? formatInr(plan?.price_yearly_inr)
+      : formatInr(plan?.price_monthly_inr)
+  const priceSuffix = subscription?.is_lifetime ? 'one-time' : subscription?.billing_cycle === 'yearly' ? '/year' : '/month'
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/20">
       <AppNav title="Bill2CRM" />
       <main className="mx-auto w-full max-w-4xl space-y-6 p-4 py-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{tenant.business_name}</h1>
-          <p className="text-muted-foreground">{tenant.subdomain_slug}.bill2crm.in</p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
+              {tenant.business_name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{tenant.business_name}</h1>
+              <button
+                onClick={handleCopyLink}
+                className="group flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                {tenant.subdomain_slug}.bill2crm.in
+                {copied ? (
+                  <Check className="size-3.5 text-primary" />
+                ) : (
+                  <Copy className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                )}
+              </button>
+            </div>
+          </div>
+          <Badge variant={STATUS_BADGE_VARIANT[tenant.status]} className="text-sm">
+            {STATUS_LABEL[tenant.status]}
+          </Badge>
         </div>
 
-        <Card className="border-primary/30 bg-primary/[0.03]">
+        <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.07] via-primary/[0.02] to-transparent">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Rocket className="size-5 text-primary" /> Your workspace is ready
-              </CardTitle>
-              <Badge variant={STATUS_BADGE_VARIANT[tenant.status]}>{STATUS_LABEL[tenant.status]}</Badge>
-            </div>
-            <CardDescription>
-              {trialDays !== null
-                ? `${trialDays} day${trialDays === 1 ? '' : 's'} left in your free trial.`
-                : 'Open your Bill2CRM app — no separate login needed.'}
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Rocket className="size-5 text-primary" /> Your workspace is ready
+            </CardTitle>
+            <CardDescription>Open your Bill2CRM app — no separate login needed.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button size="lg" onClick={handleLaunch} disabled={launching}>
@@ -92,47 +134,100 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Plan &amp; usage</CardTitle>
-            <CardDescription>{plan?.name ?? 'Loading plan details…'}</CardDescription>
+          <CardHeader className="border-b pb-6">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {plan?.name ?? 'Loading plan…'}
+              {subscription?.billing_cycle && !isTrial && (
+                <Badge variant="secondary" className="font-normal">
+                  {BILLING_CYCLE_LABEL[subscription.billing_cycle] ?? subscription.billing_cycle}
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>{isTrial ? 'Free trial' : 'Current plan'}</CardDescription>
+            <CardAction>
+              <div className="text-right tabular-nums">
+                <div className="text-2xl font-bold">{isTrial ? 'Free' : (priceLabel ?? '—')}</div>
+                {!isTrial && priceLabel && <div className="text-xs text-muted-foreground">{priceSuffix}</div>}
+              </div>
+            </CardAction>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Stat label="Users" value={formatLimit(subscription?.user_limit_override ?? plan?.user_limit ?? null)} />
-            <Stat
-              label="Storage"
-              value={formatLimit(subscription?.storage_limit_override_mb ?? plan?.storage_limit_mb ?? null, ' MB')}
-            />
-            <Stat label="Monthly price" value={formatInr(plan?.price_monthly_inr) ?? '—'} />
-            <Stat
-              label="Renews"
-              value={
-                subscription?.is_lifetime
-                  ? 'Lifetime'
-                  : subscription?.current_period_end
-                    ? new Date(subscription.current_period_end).toLocaleDateString('en-IN')
-                    : '—'
-              }
-            />
-          </CardContent>
-        </Card>
+          <CardContent className="space-y-5 pt-6">
+            {isTrial && subscription?.trial_ends_at && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium">Trial progress</span>
+                  <span className="text-muted-foreground">
+                    {trialDays} day{trialDays === 1 ? '' : 's'} left
+                  </span>
+                </div>
+                <Progress value={trialPct} className="h-1.5" />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Ends{' '}
+                  {new Date(subscription.trial_ends_at).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+            )}
 
-        <div className="flex justify-end">
-          <UpgradeRequestDialog
-            tenantId={tenant.id}
-            businessName={tenant.business_name}
-            subdomainSlug={tenant.subdomain_slug}
-          />
-        </div>
+            {!isTrial && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {subscription?.is_lifetime ? 'Access' : 'Renews'}
+                </span>
+                <span className="font-medium">
+                  {subscription?.is_lifetime
+                    ? 'Lifetime'
+                    : subscription?.current_period_end
+                      ? new Date(subscription.current_period_end).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : '—'}
+                </span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <UsageStat
+                icon={Users}
+                label="Users"
+                value={formatLimit(subscription?.user_limit_override ?? plan?.user_limit ?? null)}
+              />
+              <UsageStat
+                icon={HardDrive}
+                label="Storage"
+                value={formatLimit(subscription?.storage_limit_override_mb ?? plan?.storage_limit_mb ?? null, ' MB')}
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex items-center justify-between border-t pt-6">
+            <p className="text-sm text-muted-foreground">Need more room to grow?</p>
+            <UpgradeRequestDialog
+              tenantId={tenant.id}
+              businessName={tenant.business_name}
+              subdomainSlug={tenant.subdomain_slug}
+            />
+          </CardFooter>
+        </Card>
       </main>
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function UsageStat({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-lg font-semibold">{value}</div>
+    <div className="flex items-center gap-3 rounded-lg border p-3">
+      <div className="grid size-9 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
+        <Icon className="size-4" />
+      </div>
+      <div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="text-sm font-semibold">{value}</div>
+      </div>
     </div>
   )
 }
