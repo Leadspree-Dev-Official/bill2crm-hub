@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@/types/database'
+import type { PaymentMethod, TenantStatus } from '@/types/database'
 
 export function formatInr(amount: number | null | undefined) {
   if (amount === null || amount === undefined) return null
@@ -33,4 +33,10 @@ export const STATUS_BADGE_VARIANT: Record<TenantStatus, 'default' | 'secondary' 
 export function formatLimit(limit: number | null | undefined, unit = '') {
   if (limit === null || limit === undefined) return 'Unlimited'
   return `${limit.toLocaleString('en-IN')}${unit}`
+}
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  whatsapp: 'WhatsApp Order & Payment',
+  razorpay: 'Razorpay',
+  stripe: 'Stripe',
 }

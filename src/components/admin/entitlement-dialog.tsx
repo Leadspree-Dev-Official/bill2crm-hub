@@ -25,11 +25,15 @@ export function EntitlementDialog({
   open,
   onOpenChange,
   onSaved,
+  defaultPlanId,
 }: {
   tenant: TenantWithSubscription | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
+  /** Preselects this plan instead of the tenant's current one — used when granting access
+   *  from an upgrade request, where the customer already told us which plan they want. */
+  defaultPlanId?: string | null
 }) {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [planId, setPlanId] = useState('')
@@ -52,13 +56,13 @@ export function EntitlementDialog({
   useEffect(() => {
     if (!tenant) return
     const sub = tenant.tenant_subscriptions
-    setPlanId(sub?.plan_id ?? '')
+    setPlanId(defaultPlanId ?? sub?.plan_id ?? '')
     setStatus(tenant.status)
     setCurrentPeriodEnd(sub?.current_period_end ? sub.current_period_end.slice(0, 10) : '')
     setIsLifetime(sub?.is_lifetime ?? false)
     setUserLimitOverride(sub?.user_limit_override?.toString() ?? '')
     setStorageLimitOverride(sub?.storage_limit_override_mb?.toString() ?? '')
-  }, [tenant])
+  }, [tenant, defaultPlanId])
 
   async function save() {
     if (!tenant) return

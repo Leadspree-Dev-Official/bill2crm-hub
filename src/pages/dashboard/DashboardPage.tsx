@@ -117,7 +117,11 @@ export default function DashboardPage() {
         </Card>
 
         <div className="flex justify-end">
-          <UpgradeRequestDialog tenantId={tenant.id} />
+          <UpgradeRequestDialog
+            tenantId={tenant.id}
+            businessName={tenant.business_name}
+            subdomainSlug={tenant.subdomain_slug}
+          />
         </div>
       </main>
     </div>

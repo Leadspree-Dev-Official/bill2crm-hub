@@ -10,6 +10,7 @@ import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import AdminLayout from '@/pages/admin/AdminLayout'
 import TenantsPage from '@/pages/admin/TenantsPage'
+import UpgradeRequestsPage from '@/pages/admin/UpgradeRequestsPage'
 import PlansPage from '@/pages/admin/PlansPage'
 import AuditLogPage from '@/pages/admin/AuditLogPage'
 import SuperAdminsPage from '@/pages/admin/SuperAdminsPage'
@@ -46,6 +47,7 @@ export default function App() {
           <Route element={<RequireSuperAdmin />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<TenantsPage />} />
+              <Route path="upgrade-requests" element={<UpgradeRequestsPage />} />
               <Route path="plans" element={<PlansPage />} />
               <Route path="audit-log" element={<AuditLogPage />} />
               <Route path="super-admins" element={<SuperAdminsPage />} />

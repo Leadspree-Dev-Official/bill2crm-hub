@@ -1,6 +1,9 @@
 export type TenantStatus = 'trial' | 'active' | 'free' | 'past_due' | 'suspended' | 'cancelled'
 export type BillingCycle = 'monthly' | 'yearly' | 'lifetime'
 export type UpgradeRequestStatus = 'pending' | 'contacted' | 'resolved' | 'dismissed'
+/** 'whatsapp' is the only channel that actually grants access today (manually, by a super
+ *  admin). razorpay/stripe are selectable in the UI as "coming soon" but not yet payable. */
+export type PaymentMethod = 'whatsapp' | 'razorpay' | 'stripe'
 
 export interface Tenant {
   id: string
@@ -66,10 +69,17 @@ export interface UpgradeRequest {
   requested_plan_id: string | null
   note: string | null
   status: UpgradeRequestStatus
+  payment_method: PaymentMethod
   created_at: string
 }
 
 /** Joined view used across the dashboard and admin console. */
 export interface TenantWithSubscription extends Tenant {
   tenant_subscriptions: TenantSubscription | null
+}
+
+/** Joined view used by the admin "Upgrade requests" queue. */
+export interface UpgradeRequestWithDetails extends UpgradeRequest {
+  tenant: TenantWithSubscription
+  requested_plan: Pick<SubscriptionPlan, 'id' | 'name'> | null
 }
