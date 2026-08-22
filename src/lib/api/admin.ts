@@ -87,3 +87,53 @@ export async function revokeSuperAdmin(userId: string) {
   const { error } = await supabase.rpc('admin_revoke_super_admin', { p_user_id: userId })
   return { error: error?.message ?? null }
 }
+
+export async function createAppTarget(input: {
+  label: string
+  supabaseUrl: string
+  serviceRoleKey: string
+  isDefault: boolean
+}) {
+  const { data, error } = await supabase.rpc('admin_create_app_target', {
+    p_label: input.label,
+    p_supabase_url: input.supabaseUrl,
+    p_service_role_key: input.serviceRoleKey,
+    p_is_default: input.isDefault,
+  })
+  return { id: data as string | null, error: error?.message ?? null }
+}
+
+/** Pass serviceRoleKey only to rotate it — omit/blank to leave the stored key untouched. */
+export async function updateAppTarget(input: {
+  targetId: string
+  label: string
+  supabaseUrl: string
+  serviceRoleKey?: string
+}) {
+  const { error } = await supabase.rpc('admin_update_app_target', {
+    p_target_id: input.targetId,
+    p_label: input.label,
+    p_supabase_url: input.supabaseUrl,
+    p_service_role_key: input.serviceRoleKey || null,
+  })
+  return { error: error?.message ?? null }
+}
+
+export async function setDefaultAppTarget(targetId: string) {
+  const { error } = await supabase.rpc('admin_set_default_app_target', { p_target_id: targetId })
+  return { error: error?.message ?? null }
+}
+
+export async function deleteAppTarget(targetId: string) {
+  const { error } = await supabase.rpc('admin_delete_app_target', { p_target_id: targetId })
+  return { error: error?.message ?? null }
+}
+
+/** targetId = null resets the tenant to whatever app link is currently default. */
+export async function reassignTenantAppTarget(tenantId: string, targetId: string | null) {
+  const { error } = await supabase.rpc('admin_reassign_tenant_app_target', {
+    p_tenant_id: tenantId,
+    p_target_id: targetId,
+  })
+  return { error: error?.message ?? null }
+}

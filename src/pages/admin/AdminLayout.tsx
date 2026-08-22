@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 const TABS = [
   { to: '/admin', label: 'Tenants', end: true },
   { to: '/admin/upgrade-requests', label: 'Upgrade requests' },
+  { to: '/admin/app-links', label: 'App links' },
   { to: '/admin/plans', label: 'Plans' },
   { to: '/admin/audit-log', label: 'Audit log' },
   { to: '/admin/super-admins', label: 'Super admins' },

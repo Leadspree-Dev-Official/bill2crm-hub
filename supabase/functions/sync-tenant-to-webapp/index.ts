@@ -7,7 +7,7 @@
 // carry a user session, so this checks a shared secret header instead.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { corsHeaders, mapOrgStatus, mapSubscriptionStatus, webAppEnv, type OwnTenantStatus } from '../_shared/webapp-bridge.ts'
+import { corsHeaders, mapOrgStatus, mapSubscriptionStatus, resolveAppTarget, type OwnTenantStatus } from '../_shared/webapp-bridge.ts'
 
 interface WebhookPayload {
   type: 'INSERT' | 'UPDATE'
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Could not resolve owner email' }), { status: 404 })
     }
 
-    const { url, serviceRoleKey } = webAppEnv()
+    const { url, serviceRoleKey } = await resolveAppTarget(own, tenantId)
     const webApp = createClient(url, serviceRoleKey)
 
     // Ensure a matching identity exists in the Web App project. If the Web App's own signup

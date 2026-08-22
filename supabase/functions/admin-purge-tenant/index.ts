@@ -9,7 +9,7 @@
 // complete wipe. Documented in supabase/README.md.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { corsHeaders, webAppEnv } from '../_shared/webapp-bridge.ts'
+import { corsHeaders, resolveAppTarget } from '../_shared/webapp-bridge.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const { data: tenant } = await ownService.from('tenants').select('web_app_org_id').eq('id', tenantId).maybeSingle()
 
     if (tenant?.web_app_org_id) {
-      const { url, serviceRoleKey } = webAppEnv()
+      const { url, serviceRoleKey } = await resolveAppTarget(ownService, tenantId)
       const webApp = createClient(url, serviceRoleKey)
       const orgId = tenant.web_app_org_id as string
 

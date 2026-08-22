@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { purgeTenant } from '@/lib/api/admin'
-import type { TenantWithSubscription } from '@/types/database'
+import type { TenantWithDetails } from '@/types/database'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,22 +18,25 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { EntitlementDialog } from '@/components/admin/entitlement-dialog'
+import { ReassignAppTargetDialog } from '@/components/admin/reassign-app-target-dialog'
 import { STATUS_BADGE_VARIANT, STATUS_LABEL } from '@/lib/plan-utils'
 import { Loader2, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function TenantsPage() {
-  const [tenants, setTenants] = useState<TenantWithSubscription[]>([])
+  const [tenants, setTenants] = useState<TenantWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [editing, setEditing] = useState<TenantWithSubscription | null>(null)
+  const [editing, setEditing] = useState<TenantWithDetails | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [reassigning, setReassigning] = useState<TenantWithDetails | null>(null)
+  const [reassignOpen, setReassignOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('tenants')
-      .select('*, tenant_subscriptions(*)')
+      .select('*, tenant_subscriptions(*), app_target:app_targets(id, label)')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -45,7 +48,7 @@ export default function TenantsPage() {
           tenant_subscriptions: Array.isArray(row.tenant_subscriptions)
             ? (row.tenant_subscriptions[0] ?? null)
             : row.tenant_subscriptions,
-        })) as TenantWithSubscription[],
+        })) as TenantWithDetails[],
       )
     }
     setLoading(false)
@@ -55,7 +58,7 @@ export default function TenantsPage() {
     void load()
   }, [load])
 
-  async function handlePurge(tenant: TenantWithSubscription) {
+  async function handlePurge(tenant: TenantWithDetails) {
     const { error } = await purgeTenant(tenant.id)
     if (error) {
       toast.error('Could not purge tenant', { description: error })
@@ -98,6 +101,7 @@ export default function TenantsPage() {
                 <TableHead>Subdomain</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Plan</TableHead>
+                <TableHead>App link</TableHead>
                 <TableHead>Signed up</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -111,10 +115,21 @@ export default function TenantsPage() {
                     <Badge variant={STATUS_BADGE_VARIANT[tenant.status]}>{STATUS_LABEL[tenant.status]}</Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{tenant.tenant_subscriptions?.plan_id ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">{tenant.app_target?.label ?? 'Default'}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(tenant.created_at).toLocaleDateString('en-IN')}
                   </TableCell>
                   <TableCell className="flex justify-end gap-2 text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setReassigning(tenant)
+                        setReassignOpen(true)
+                      }}
+                    >
+                      Reassign
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -155,7 +170,7 @@ export default function TenantsPage() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     No tenants match.
                   </TableCell>
                 </TableRow>
@@ -166,6 +181,12 @@ export default function TenantsPage() {
       )}
 
       <EntitlementDialog tenant={editing} open={dialogOpen} onOpenChange={setDialogOpen} onSaved={load} />
+      <ReassignAppTargetDialog
+        tenant={reassigning}
+        open={reassignOpen}
+        onOpenChange={setReassignOpen}
+        onSaved={load}
+      />
     </div>
   )
 }

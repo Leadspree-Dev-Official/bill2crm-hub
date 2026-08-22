@@ -20,19 +20,26 @@ deploying, into your hosting provider's environment variables.
 
 ## 2. Set Edge Function secrets
 
-From the **Web App project's** dashboard (Project Settings → API), copy its `service_role`
-key — never the anon key, and never paste it into any file in this repo.
-
 ```bash
 supabase secrets set \
-  WEBAPP_SUPABASE_URL="https://<webapp-project-ref>.supabase.co" \
-  WEBAPP_SUPABASE_SERVICE_ROLE_KEY="<webapp service_role key>" \
   SYNC_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
   ROOT_DOMAIN="bill2crm.in"
 ```
 
 Keep the `SYNC_WEBHOOK_SECRET` value handy — you'll paste it into the Database Webhook
-headers in step 4.
+headers in step 4. (The Web App project's `service_role` key is *not* a secret here — see
+step 4a: it's entered once through `/admin → App links`, encrypted in this project's own
+database via Supabase Vault, never as a function secret or a plain column.)
+
+### 2a. Add the Web App project as an "App link" (super admin console)
+
+Sign in as the bootstrap super admin (step 9), open `/admin → App links → Add app link`, and
+fill in the Web App project's URL and `service_role` key (Project Settings → API — never the
+anon key). Mark it as the default. Every tenant that signs up from here on is stamped with
+whichever app link is default *at the moment they sign up* — changing the default later never
+moves an already-provisioned tenant. A specific tenant can also be pointed at a different,
+dedicated app link from `/admin → Tenants → Reassign` (e.g. a private/personal cloud instance
+for one customer) independently of the default.
 
 ## 3. Deploy the Edge Functions
 

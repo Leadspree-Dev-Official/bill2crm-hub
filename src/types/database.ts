@@ -13,8 +13,21 @@ export interface Tenant {
   web_app_org_id: string | null
   web_app_email: string | null
   status: TenantStatus
+  /** Which Web App deployment "Launch my app" and entitlement sync point at. Stamped with
+   *  the default app_target at signup time; null means "reset to whatever is default now". */
+  app_target_id: string | null
   created_at: string
   updated_at: string
+}
+
+/** A Web App deployment super admins can point tenants at. The service_role key itself never
+ *  appears here — it's Vault-encrypted server-side and only resolved inside Edge Functions. */
+export interface AppTarget {
+  id: string
+  label: string
+  supabase_url: string
+  is_default: boolean
+  created_at: string
 }
 
 export interface SubscriptionPlan {
@@ -76,6 +89,11 @@ export interface UpgradeRequest {
 /** Joined view used across the dashboard and admin console. */
 export interface TenantWithSubscription extends Tenant {
   tenant_subscriptions: TenantSubscription | null
+}
+
+/** Adds the assigned app link's label, for the /admin → Tenants list. */
+export interface TenantWithDetails extends TenantWithSubscription {
+  app_target: Pick<AppTarget, 'id' | 'label'> | null
 }
 
 /** Joined view used by the admin "Upgrade requests" queue. */
