@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EntitlementDialog } from '@/components/admin/entitlement-dialog'
+import { AdminPageHeader } from '@/components/admin/admin-page-header'
 import { PAYMENT_METHOD_LABEL } from '@/lib/plan-utils'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -73,23 +74,21 @@ export default function UpgradeRequestsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Upgrade requests</h1>
-        <p className="text-sm text-muted-foreground">
-          Billing isn&apos;t self-serve yet — every request lands here until it&apos;s granted or dismissed.
-        </p>
-      </div>
+    <div className="space-y-5">
+      <AdminPageHeader
+        title="Upgrade requests"
+        description="Billing isn't self-serve yet — every request lands here until it's granted or dismissed."
+      />
 
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="rounded-md border bg-background">
+        <div className="overflow-hidden rounded-md border border-border bg-surface">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="hover:bg-transparent">
                 <TableHead>Business</TableHead>
                 <TableHead>Requested plan</TableHead>
                 <TableHead>Payment method</TableHead>
@@ -101,34 +100,36 @@ export default function UpgradeRequestsPage() {
             <TableBody>
               {requests.map((request) => (
                 <TableRow key={request.id}>
-                  <TableCell className="font-medium">
-                    {request.tenant.business_name}
-                    <div className="text-xs font-normal text-muted-foreground">
-                      {request.tenant.subdomain_slug}.bill2crm.in
-                    </div>
+                  <TableCell>
+                    <p className="font-medium">{request.tenant.business_name}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">{request.tenant.subdomain_slug}.bill2crm.in</p>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{request.requested_plan?.name ?? '—'}</TableCell>
                   <TableCell>
-                    <Badge variant={request.payment_method === 'whatsapp' ? 'default' : 'outline'}>
+                    <Badge
+                      variant="outline"
+                      className={
+                        request.payment_method === 'whatsapp'
+                          ? 'border-accent/40 bg-accent/10 text-accent'
+                          : 'border-border-strong bg-muted text-muted-foreground'
+                      }
+                    >
                       {PAYMENT_METHOD_LABEL[request.payment_method]}
                     </Badge>
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-muted-foreground">{request.note ?? '—'}</TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
+                  <TableCell className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
                     {new Date(request.created_at).toLocaleString('en-IN')}
                   </TableCell>
-                  <TableCell className="flex justify-end gap-2 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={dismissing === request.id}
-                      onClick={() => handleDismiss(request)}
-                    >
-                      {dismissing === request.id ? <Loader2 className="size-4 animate-spin" /> : 'Dismiss'}
-                    </Button>
-                    <Button size="sm" onClick={() => setGranting(request)}>
-                      Grant access
-                    </Button>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" disabled={dismissing === request.id} onClick={() => handleDismiss(request)}>
+                        {dismissing === request.id ? <Loader2 className="size-4 animate-spin" /> : 'Dismiss'}
+                      </Button>
+                      <Button size="sm" onClick={() => setGranting(request)}>
+                        Grant access
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

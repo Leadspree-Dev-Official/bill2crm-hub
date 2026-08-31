@@ -29,7 +29,7 @@ const PROBLEMS = [
 
 export function ProblemSolution() {
   return (
-    <section className="relative bg-slate-50 px-5 py-20">
+    <section className="relative border-b border-border bg-surface px-5 py-20">
       <div className="mx-auto max-w-4xl">
         <SectionHead
           eyebrow="The problem"
@@ -46,21 +46,21 @@ export function ProblemSolution() {
                 y1={50}
                 x2={node.x}
                 y2={node.y}
-                stroke="#c7d2fe"
+                stroke="var(--color-border-strong)"
                 strokeWidth="0.6"
                 strokeDasharray="2,2"
                 vectorEffect="non-scaling-stroke"
               />
             ))}
           </svg>
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-slate-200 bg-slate-900 px-4 py-3 text-center shadow-lg">
-            <div className="text-sm font-bold text-white">Your Business</div>
-            <div className="text-[11px] text-slate-400">but everything lives apart</div>
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-foreground px-4 py-3 text-center shadow-raise">
+            <div className="text-sm font-semibold text-background">Your Business</div>
+            <div className="text-[11px] text-background/60">but everything lives apart</div>
           </div>
           {NODES.map((node) => (
             <div
               key={node.label}
-              className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm"
+              className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm"
               style={{ left: `${node.x}%`, top: `${node.y}%` }}
             >
               {node.label}
@@ -68,12 +68,12 @@ export function ProblemSolution() {
           ))}
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-3">
           {PROBLEMS.map((p) => (
-            <div key={p.n} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <span className="text-2xl font-extrabold text-indigo-200">{p.n}</span>
-              <h3 className="mt-2 text-base font-bold text-slate-900">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">{p.desc}</p>
+            <div key={p.n} className="rounded-lg border border-border bg-surface p-6">
+              <span className="tabular font-display text-2xl font-semibold text-primary/30">{p.n}</span>
+              <h3 className="mt-2 text-base font-semibold">{p.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>
             </div>
           ))}
         </div>

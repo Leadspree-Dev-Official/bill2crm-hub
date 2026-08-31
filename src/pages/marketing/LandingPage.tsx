@@ -14,7 +14,7 @@ import { MarketingFooter } from './sections/MarketingFooter'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-slate-900 antialiased">
+    <div className="min-h-screen bg-background text-foreground antialiased">
       <MarketingNav />
       <Hero />
       <MetricsBar />

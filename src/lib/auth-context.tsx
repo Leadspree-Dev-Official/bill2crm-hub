@@ -10,6 +10,11 @@ interface AuthContextValue {
   subscription: TenantSubscription | null
   isSuperAdmin: boolean
   loading: boolean
+  /** True from the moment Supabase fires a PASSWORD_RECOVERY auth event (a user landed here via
+   *  a password-reset email link) until the password is actually updated or they sign out. Lets
+   *  route guards steer a recovery session to /reset-password instead of treating it like any
+   *  other "already signed in" session and bouncing straight to the dashboard. */
+  isPasswordRecovery: boolean
   refresh: () => Promise<void>
   signUp: (email: string, password: string, businessName: string) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
@@ -24,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<TenantSubscription | null>(null)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false)
 
   const loadProfile = useCallback(async (currentUser: User | null) => {
     if (!currentUser) {
@@ -74,7 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (active) setLoading(false)
     })
 
-    const { data: subscriptionHandle } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+    const { data: subscriptionHandle } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true)
+      if (event === 'USER_UPDATED' || event === 'SIGNED_OUT') setIsPasswordRecovery(false)
       setSession(currentSession)
       await loadProfile(currentSession?.user ?? null)
     })
@@ -111,12 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription,
       isSuperAdmin,
       loading,
+      isPasswordRecovery,
       refresh,
       signUp,
       signIn,
       signOut,
     }),
-    [session, tenant, subscription, isSuperAdmin, loading, refresh, signUp, signIn, signOut],
+    [session, tenant, subscription, isSuperAdmin, loading, isPasswordRecovery, refresh, signUp, signIn, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

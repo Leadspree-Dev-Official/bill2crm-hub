@@ -1,0 +1,5 @@
+# SPA fallback. Without this, a refresh or a direct hit on /login, /dashboard,
+# /admin/* or /reset-password returns the host's 404 instead of the app — which
+# breaks Supabase password-reset links, since they land on /reset-password.
+/assets/*  /assets/:splat  200
+/*         /index.html     200

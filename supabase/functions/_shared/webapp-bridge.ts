@@ -28,6 +28,29 @@ export async function resolveAppTarget(own: SupabaseClient, tenantId?: string) {
   return { url: row.supabase_url, serviceRoleKey: row.service_role_key, targetId: row.target_id }
 }
 
+export async function resolveAppTargetById(own: SupabaseClient, targetId: string) {
+  const { data, error } = await own.rpc('resolve_app_target_by_id', { p_target_id: targetId }).single()
+  if (error || !data) {
+    throw error ?? new Error('App link target not found')
+  }
+  const row = data as { target_id: string; label: string; supabase_url: string; service_role_key: string }
+  return { url: row.supabase_url, serviceRoleKey: row.service_role_key, targetId: row.target_id, label: row.label }
+}
+
+export async function resolveAllAppTargets(own: SupabaseClient) {
+  const { data, error } = await own.rpc('resolve_all_app_targets')
+  if (error || !data) {
+    throw error ?? new Error('Failed to resolve app targets')
+  }
+  return (data as Array<{ target_id: string; label: string; supabase_url: string; is_default: boolean; service_role_key: string }>).map((row) => ({
+    targetId: row.target_id,
+    label: row.label,
+    url: row.supabase_url,
+    isDefault: row.is_default,
+    serviceRoleKey: row.service_role_key,
+  }))
+}
+
 export type OwnTenantStatus = 'trial' | 'active' | 'free' | 'past_due' | 'suspended' | 'cancelled'
 
 /** organizations.status in the Web App project only has three values. */

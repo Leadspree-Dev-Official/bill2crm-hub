@@ -39,6 +39,7 @@ export interface SubscriptionPlan {
   price_lifetime_inr: number | null
   user_limit: number | null
   storage_limit_mb: number | null
+  periodic_limit: number | null
   feature_flags: Record<string, unknown>
   is_active: boolean
   sort_order: number

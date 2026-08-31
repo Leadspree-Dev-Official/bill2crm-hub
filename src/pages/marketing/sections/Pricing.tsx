@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import type { SubscriptionPlan } from '@/types/database'
 import { formatInr, formatLimit } from '@/lib/plan-utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Check, Minus } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { SectionHead } from './SectionHead'
 
 type BillingToggle = 'monthly' | 'yearly'
@@ -22,7 +25,7 @@ export function Pricing() {
   }, [])
 
   return (
-    <section id="pricing" className="relative px-5 py-20">
+    <section id="pricing" className="relative border-b border-border bg-surface-muted px-5 py-20">
       <div className="mx-auto max-w-6xl">
         <SectionHead
           eyebrow="Pricing"
@@ -30,34 +33,41 @@ export function Pricing() {
           desc="Start free. Upgrade only when you need more. No hidden fees, cancel anytime."
         />
 
-        <div className="mb-10 flex items-center justify-center gap-3 text-sm text-slate-500">
-          <span className={billing === 'monthly' ? 'font-semibold text-slate-900' : undefined}>Monthly</span>
-          <button
-            role="switch"
-            aria-checked={billing === 'yearly'}
-            onClick={() => setBilling((b) => (b === 'monthly' ? 'yearly' : 'monthly'))}
-            className="relative h-7 w-13 rounded-full border border-slate-200 bg-slate-100 transition-colors"
+        <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
+          <div
+            role="group"
+            aria-label="Billing cycle"
+            className="inline-flex rounded-md border border-border bg-surface p-0.5"
           >
-            <span
-              className={`absolute top-0.5 size-6 rounded-full bg-slate-900 transition-transform ${
-                billing === 'yearly' ? 'translate-x-6' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
-          <span className={billing === 'yearly' ? 'font-semibold text-slate-900' : undefined}>Yearly</span>
-          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600">-20%</span>
+            {(['monthly', 'yearly'] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setBilling(c)}
+                aria-pressed={billing === c}
+                className={cn(
+                  'rounded-[4px] px-4 py-1.5 text-sm font-medium capitalize transition-colors',
+                  billing === c ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <Badge variant="outline" className="border-accent/40 bg-accent-soft font-mono text-[11px] text-accent">
+            Save up to 20% yearly
+          </Badge>
         </div>
 
         {plans.length === 0 ? (
-          <p className="text-center text-slate-400">Plans will appear here once the control-plane project is connected.</p>
+          <p className="text-center text-muted-foreground">Plans will appear here once the control-plane project is connected.</p>
         ) : (
           <>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {plans.map((plan) => (
                 <PlanCard key={plan.id} plan={plan} billing={billing} />
               ))}
             </div>
-            <p className="mt-6 text-center text-sm text-slate-400">
+            <p className="mt-6 text-center text-sm text-muted-foreground">
               7-day free trial · No credit card required · Cancel anytime
             </p>
             <ComparisonTable plans={plans} />
@@ -91,49 +101,45 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
 
   return (
     <div
-      className={`relative flex flex-col rounded-2xl border p-6 ${
-        highlighted ? 'border-slate-900 bg-white shadow-xl' : 'border-slate-200 bg-white shadow-sm'
-      }`}
-    >
-      {highlighted && (
-        <span className="absolute -top-3 left-6 rounded-full bg-slate-900 px-3 py-1 text-xs font-bold text-white">
-          Most popular
-        </span>
+      className={cn(
+        'flex flex-col rounded-lg border bg-surface p-6',
+        highlighted ? 'border-primary/60 shadow-raise ring-1 ring-primary/15' : 'border-border',
       )}
-      <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
-      <p className="mt-1 text-sm text-slate-500">{plan.description}</p>
-      <div className="mt-4 flex items-baseline gap-1.5">
-        <span className="text-3xl font-extrabold text-slate-900">{isCustom ? 'Custom' : priceLabel}</span>
-        {!isCustom && <span className="text-xs text-slate-400">{priceSuffix}</span>}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-lg font-semibold">{plan.name}</h3>
+        {highlighted ? (
+          <Badge className="shrink-0 bg-primary-soft text-primary hover:bg-primary-soft">Most popular</Badge>
+        ) : null}
       </div>
-      <ul className="mt-5 flex-1 space-y-2 text-sm text-slate-600">
+      <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
+      <div className="mt-4 flex items-baseline gap-1.5">
+        <span className="tabular font-display text-3xl font-semibold">{isCustom ? 'Custom' : priceLabel}</span>
+        {!isCustom && <span className="text-xs text-muted-foreground">{priceSuffix}</span>}
+      </div>
+      <ul className="mt-5 flex-1 space-y-2 text-sm text-muted-foreground">
         <li className="flex items-center gap-2">
-          <Check className="size-4 shrink-0 text-emerald-500" />
+          <Check className="size-4 shrink-0 text-accent" />
           {formatLimit(plan.user_limit)} user{plan.user_limit === 1 ? '' : 's'}
         </li>
         <li className="flex items-center gap-2">
-          <Check className="size-4 shrink-0 text-emerald-500" />
+          <Check className="size-4 shrink-0 text-accent" />
           {formatLimit(plan.storage_limit_mb, ' MB')} storage
         </li>
         {Boolean(plan.feature_flags?.automated_reminders) && (
           <li className="flex items-center gap-2">
-            <Check className="size-4 shrink-0 text-emerald-500" /> Automated reminders
+            <Check className="size-4 shrink-0 text-accent" /> Automated reminders
           </li>
         )}
         {Boolean(plan.feature_flags?.priority_support) && (
           <li className="flex items-center gap-2">
-            <Check className="size-4 shrink-0 text-emerald-500" /> Priority support
+            <Check className="size-4 shrink-0 text-accent" /> Priority support
           </li>
         )}
       </ul>
-      <Link
-        to="/signup"
-        className={`mt-6 block rounded-full px-4 py-2.5 text-center text-sm font-semibold transition-transform hover:-translate-y-0.5 ${
-          highlighted ? 'bg-slate-900 text-white shadow-md' : 'border border-slate-200 text-slate-900 hover:bg-slate-50'
-        }`}
-      >
-        {isCustom ? 'Get a quote' : 'Start free trial'}
-      </Link>
+      <Button asChild variant={highlighted ? 'default' : 'outline'} className="mt-6 w-full">
+        <Link to="/signup">{isCustom ? 'Get a quote' : 'Start free trial'}</Link>
+      </Button>
     </div>
   )
 }
@@ -152,8 +158,8 @@ const FEATURE_ROWS: { key: string; label: string; render: (plan: SubscriptionPla
     label: 'Secured Doc Vault',
     render: (p) => {
       const v = p.feature_flags?.doc_vault_limit
-      if (v === null || v === undefined) return <Minus className="mx-auto size-4 text-slate-300" />
-      if (typeof v === 'number' && v === 0) return <Minus className="mx-auto size-4 text-slate-300" />
+      if (v === null || v === undefined) return <Minus className="mx-auto size-4 text-muted-foreground/50" />
+      if (typeof v === 'number' && v === 0) return <Minus className="mx-auto size-4 text-muted-foreground/50" />
       return typeof v === 'number' ? `Up to ${v}` : 'Unlimited'
     },
   },
@@ -171,23 +177,23 @@ const FEATURE_ROWS: { key: string; label: string; render: (plan: SubscriptionPla
 
 function FlagCell({ value }: { value: unknown }) {
   return value ? (
-    <Check className="mx-auto size-4 text-emerald-500" />
+    <Check className="mx-auto size-4 text-accent" />
   ) : (
-    <Minus className="mx-auto size-4 text-slate-300" />
+    <Minus className="mx-auto size-4 text-muted-foreground/50" />
   )
 }
 
 function ComparisonTable({ plans }: { plans: SubscriptionPlan[] }) {
   return (
     <div className="mt-14">
-      <h3 className="mb-5 text-center text-xl font-bold text-slate-900">Compare all plans side by side</h3>
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+      <h3 className="mb-5 text-center text-lg font-semibold">Compare all plans side by side</h3>
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50">
-              <th className="p-3.5 text-left font-medium text-slate-500">Feature</th>
+            <tr className="border-b border-border">
+              <th className="p-3.5 text-left font-medium text-muted-foreground">Feature</th>
               {plans.map((p) => (
-                <th key={p.id} className="p-3.5 text-center font-semibold text-slate-900">
+                <th key={p.id} className="p-3.5 text-center font-semibold">
                   {p.name}
                 </th>
               ))}
@@ -195,10 +201,10 @@ function ComparisonTable({ plans }: { plans: SubscriptionPlan[] }) {
           </thead>
           <tbody>
             {FEATURE_ROWS.map((row) => (
-              <tr key={row.key} className="border-b border-slate-100 last:border-0">
-                <td className="p-3.5 text-slate-500">{row.label}</td>
+              <tr key={row.key} className="border-b border-border last:border-0">
+                <td className="p-3.5 text-muted-foreground">{row.label}</td>
                 {plans.map((p) => (
-                  <td key={p.id} className="p-3.5 text-center text-slate-700">
+                  <td key={p.id} className="tabular p-3.5 text-center">
                     {row.render(p)}
                   </td>
                 ))}

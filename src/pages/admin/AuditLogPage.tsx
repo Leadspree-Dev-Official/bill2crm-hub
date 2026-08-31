@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { AdminAuditLogEntry } from '@/types/database'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { AdminPageHeader } from '@/components/admin/admin-page-header'
 import { Loader2 } from 'lucide-react'
 
 export default function AuditLogPage() {
@@ -22,45 +21,26 @@ export default function AuditLogPage() {
   }, [])
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight">Audit log</h1>
+    <div className="space-y-5">
+      <AdminPageHeader title="Audit log" description="Every mutating admin action, most recent first." />
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <div className="rounded-md border bg-background">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>When</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">
-                    {new Date(entry.created_at).toLocaleString('en-IN')}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{entry.action}</Badge>
-                  </TableCell>
-                  <TableCell className="max-w-md truncate font-mono text-xs text-muted-foreground">
-                    {JSON.stringify(entry.payload)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {entries.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
-                    No admin actions yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div className="divide-y divide-border overflow-hidden rounded-md border border-border bg-surface">
+          {entries.map((entry) => (
+            <div key={entry.id} className="grid gap-3 px-4 py-3 sm:grid-cols-[9rem_10rem_1fr]">
+              <span className="font-mono text-[11px] text-muted-foreground">
+                {new Date(entry.created_at).toLocaleString('en-IN')}
+              </span>
+              <span className="rounded-sm border border-border-strong bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground w-fit">
+                {entry.action}
+              </span>
+              <span className="truncate font-mono text-[11px] text-muted-foreground">{JSON.stringify(entry.payload)}</span>
+            </div>
+          ))}
+          {entries.length === 0 && <p className="px-4 py-10 text-center text-muted-foreground">No admin actions yet.</p>}
         </div>
       )}
     </div>

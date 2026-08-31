@@ -93,9 +93,23 @@ Deno.serve(async (req) => {
     const endsAt =
       subscription.status === 'trial' ? subscription.trial_ends_at : subscription.current_period_end
 
+    // The two projects keep independent subscription_plans tables, so a plan
+    // here only maps across if a super admin filled in its "Web App plan ID"
+    // (/admin -> Plans). Falling back to this project's own id silently entitles
+    // the tenant to whatever plan happens to share that id on the other side —
+    // or to nothing at all. Surfacing it as a hard failure keeps a mis-mapped
+    // plan from being sold: the webhook retries, and the admin sees the error.
+    const mappedPlanId = plan.web_app_plan_id
+    if (!mappedPlanId) {
+      throw new Error(
+        `Plan "${plan.id}" has no Web App plan ID mapped. Set it in /admin -> Plans ` +
+        `before entitlements for this plan can sync.`,
+      )
+    }
+
     const { error: subError } = await webApp.from('organization_subscriptions').upsert({
       organization_id: orgId,
-      plan_id: plan.web_app_plan_id ?? plan.id,
+      plan_id: mappedPlanId,
       status: mapSubscriptionStatus(tenant.status as OwnTenantStatus),
       starts_at: subscription.created_at,
       ends_at: endsAt,

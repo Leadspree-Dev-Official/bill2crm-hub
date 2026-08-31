@@ -26,12 +26,35 @@ export async function setTenantEntitlement(input: SetTenantEntitlementInput) {
   return { error: error?.message ?? null }
 }
 
-export async function purgeTenant(tenantId: string) {
-  const { error } = await supabase.functions.invoke('admin-purge-tenant', {
-    method: 'POST',
-    body: { tenantId },
-  })
-  return { error: error?.message ?? null }
+export interface PurgeTenantResult {
+  error: string | null
+  /** Auth identities in the Web App project that failed to delete during the purge — the tenant
+   *  record itself is still gone, but these logins were orphaned and need manual cleanup. */
+  partialFailures: { userId: string; error: string }[]
+}
+
+export async function purgeTenant(tenantId: string): Promise<PurgeTenantResult> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean; partialFailures?: { userId: string; error: string }[] }>(
+    'admin-purge-tenant',
+    {
+      method: 'POST',
+      body: { tenantId },
+    },
+  )
+  if (error) return { error: error.message, partialFailures: [] }
+  return { error: null, partialFailures: data?.partialFailures ?? [] }
+}
+
+export async function retryPurgeUsers(userIds: string[], targetId?: string): Promise<PurgeTenantResult> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean; partialFailures?: { userId: string; error: string }[] }>(
+    'admin-purge-tenant',
+    {
+      method: 'POST',
+      body: { action: 'retry_users', userIds, targetId },
+    },
+  )
+  if (error) return { error: error.message, partialFailures: [] }
+  return { error: null, partialFailures: data?.partialFailures ?? [] }
 }
 
 export async function upsertSubscriptionPlan(plan: {
@@ -43,11 +66,29 @@ export async function upsertSubscriptionPlan(plan: {
   priceLifetimeInr: number | null
   userLimit: number | null
   storageLimitMb: number | null
+  periodicLimit: number | null
   featureFlags: Record<string, unknown>
   isActive: boolean
   sortOrder: number
   webAppPlanId: string | null
 }) {
+  // The admin plan editor only knows about its own vocabulary (vaultAccess, aiAgentsAccess,
+  // etc.), but the public pricing page reads an older, different set of keys (crm,
+  // automated_reminders, doc_vault_limit, priority_support, custom_website) out of this same
+  // feature_flags jsonb column. Read whatever is already stored and merge the editor's flags on
+  // top of it, rather than replacing the object outright — otherwise saving a plan here silently
+  // wipes the flags the pricing page depends on.
+  const { data: existingPlan } = await supabase
+    .from('subscription_plans')
+    .select('feature_flags')
+    .eq('id', plan.id)
+    .maybeSingle()
+
+  const mergedFeatureFlags: Record<string, unknown> = {
+    ...(existingPlan?.feature_flags ?? {}),
+    ...plan.featureFlags,
+  }
+
   const { error } = await supabase.rpc('admin_upsert_subscription_plan', {
     p_id: plan.id,
     p_name: plan.name,
@@ -57,12 +98,23 @@ export async function upsertSubscriptionPlan(plan: {
     p_price_lifetime_inr: plan.priceLifetimeInr,
     p_user_limit: plan.userLimit,
     p_storage_limit_mb: plan.storageLimitMb,
-    p_feature_flags: plan.featureFlags,
+    p_feature_flags: mergedFeatureFlags,
     p_is_active: plan.isActive,
     p_sort_order: plan.sortOrder,
     p_web_app_plan_id: plan.webAppPlanId,
+    p_periodic_limit: plan.periodicLimit,
   })
-  return { error: error?.message ?? null }
+  if (error) return { error: error.message }
+
+  // Best-effort push into the Web App project — plan is already saved locally either way, so a
+  // sync failure (e.g. no app link configured yet) is surfaced but not treated as a save failure.
+  const { error: syncError } = await supabase.functions.invoke('sync-plan-to-webapp', {
+    method: 'POST',
+    body: { planId: plan.id },
+  })
+  if (syncError) return { error: `Plan saved, but Web App sync failed: ${syncError.message}` }
+
+  return { error: null }
 }
 
 export async function resolveUpgradeRequest(requestId: string, status: string) {
@@ -136,4 +188,29 @@ export async function reassignTenantAppTarget(tenantId: string, targetId: string
     p_target_id: targetId,
   })
   return { error: error?.message ?? null }
+}
+
+export interface TestAppTargetResult {
+  ok: boolean
+  targetId?: string
+  label?: string
+  url?: string
+  latencyMs?: number
+  authOk?: boolean
+  dbOk?: boolean
+  orgCount?: number
+  dbError?: string | null
+  authError?: string | null
+  error?: string | null
+}
+
+export async function testAppTarget(targetId: string): Promise<TestAppTargetResult> {
+  const { data, error } = await supabase.functions.invoke<TestAppTargetResult>('test-app-target', {
+    method: 'POST',
+    body: { targetId },
+  })
+  if (error) {
+    return { ok: false, error: error.message }
+  }
+  return data ?? { ok: false, error: 'No response from test function' }
 }

@@ -21,21 +21,21 @@ const POINTS = [
 
 export function DataOwnership() {
   return (
-    <section className="relative px-5 py-20">
+    <section className="relative border-b border-border px-5 py-20">
       <div className="mx-auto max-w-5xl">
         <SectionHead
           eyebrow="Private Cloud"
           title="Own your business data — not just rent access to it"
           desc="Privacy-conscious businesses choose Bill2CRM's Private Cloud plan for a dedicated database that's isolated from every other tenant."
         />
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-3">
           {POINTS.map((p) => (
-            <div key={p.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <span className="grid size-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
+            <div key={p.title} className="rounded-lg border border-border bg-surface p-6">
+              <span className="grid size-11 place-items-center rounded-md bg-primary-soft text-primary">
                 <p.icon className="size-5" />
               </span>
-              <h3 className="mt-4 text-base font-bold text-slate-900">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-500">{p.desc}</p>
+              <h3 className="mt-4 text-base font-semibold">{p.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>
             </div>
           ))}
         </div>

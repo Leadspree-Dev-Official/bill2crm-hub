@@ -4,11 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
+import { AuthLayout } from '@/components/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Loader2 } from 'lucide-react'
+import { Loader2, MailCheck } from 'lucide-react'
 
 const schema = z.object({ email: z.string().email('Enter a valid email') })
 type FormValues = z.infer<typeof schema>
@@ -22,53 +22,58 @@ export default function ForgotPasswordPage() {
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
     await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/login`,
+      redirectTo: `${window.location.origin}/reset-password`,
     })
     setSubmitting(false)
     setSent(true)
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Reset your password</CardTitle>
-          <CardDescription>We&apos;ll email you a reset link.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {sent ? (
-            <p className="text-sm text-muted-foreground">
-              If an account exists for that email, a reset link is on its way.
-            </p>
-          ) : (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email address</FormLabel>
-                      <FormControl>
-                        <Input type="email" autoComplete="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? <Loader2 className="size-4 animate-spin" /> : 'Send reset link'}
-                </Button>
-              </form>
-            </Form>
-          )}
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            <Link to="/login" className="font-medium text-primary underline-offset-4 hover:underline">
-              Back to login
-            </Link>
+    <AuthLayout
+      title="Reset your password"
+      subtitle="We'll email a reset link to the address on the account. It stays valid for 30 minutes."
+      footer={
+        <>
+          Remembered it?{' '}
+          <Link to="/login" className="font-medium text-primary hover:underline">
+            Back to sign in
+          </Link>
+        </>
+      }
+    >
+      {sent ? (
+        <div className="rounded-lg border border-accent/30 bg-accent-soft p-5">
+          <MailCheck className="size-5 text-accent" />
+          <p className="mt-3 text-sm font-medium">Reset link sent</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            If an account exists for that email, the link is on its way. Check spam before writing to support.
           </p>
-        </CardContent>
-      </Card>
-    </div>
+          <Button variant="outline" className="mt-4" onClick={() => setSent(false)}>
+            Use a different email
+          </Button>
+        </div>
+      ) : (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account email</FormLabel>
+                  <FormControl>
+                    <Input type="email" autoComplete="email" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? <Loader2 className="size-4 animate-spin" /> : 'Send reset link'}
+            </Button>
+          </form>
+        </Form>
+      )}
+    </AuthLayout>
   )
 }

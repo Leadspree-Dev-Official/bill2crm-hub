@@ -5,6 +5,13 @@
 
 const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_BUSINESS_NUMBER
 
+/** Whether VITE_WHATSAPP_BUSINESS_NUMBER is set in this environment. Check this before telling a
+ *  customer a WhatsApp chat will open — if it's false, buildWhatsAppOrderLink always returns
+ *  null and no chat window ever appears, so any success copy needs an honest fallback instead. */
+export function isWhatsAppConfigured(): boolean {
+  return Boolean(WHATSAPP_NUMBER)
+}
+
 /** Returns null if VITE_WHATSAPP_BUSINESS_NUMBER isn't configured, so callers can hide the
  *  action entirely rather than open a broken wa.me link. */
 export function buildWhatsAppOrderLink(params: {

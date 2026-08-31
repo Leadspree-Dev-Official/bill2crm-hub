@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { BrandLock } from '@/components/brand'
 
 const COLUMNS = [
   {
@@ -6,7 +7,7 @@ const COLUMNS = [
     links: [
       { label: 'Features', href: '#features' },
       { label: 'Industries', href: '#industries' },
-      { label: 'Pricing', href: '#pricing' },
+      { label: 'Pricing', href: '/pricing' },
       { label: 'FAQ', href: '#faq' },
     ],
   },
@@ -38,44 +39,53 @@ const COLUMNS = [
 
 export function MarketingFooter() {
   return (
-    <footer className="relative border-t border-slate-200 px-5 py-14">
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-1">
-            <div className="flex items-center gap-2 text-lg font-extrabold text-slate-900">
-              <span className="grid size-7 place-items-center rounded-md bg-slate-900 text-xs text-white">🧾</span>
-              Bill2CRM
-            </div>
-            <p className="mt-3 text-sm text-slate-500">
-              The all-in-one business operating system for Indian SMEs.
-            </p>
-          </div>
-          {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <h4 className="text-sm font-semibold text-slate-900">{col.title}</h4>
-              <ul className="mt-3 space-y-2 text-sm text-slate-500">
-                {col.links.map((link) =>
-                  link.href.startsWith('#') ? (
-                    <li key={link.label}>
-                      <a href={link.href} className="hover:text-slate-900">
-                        {link.label}
-                      </a>
-                    </li>
-                  ) : (
-                    <li key={link.label}>
-                      <Link to={link.href} className="hover:text-slate-900">
-                        {link.label}
-                      </Link>
-                    </li>
-                  ),
-                )}
-              </ul>
-            </div>
-          ))}
+    <footer className="border-t border-border bg-surface-muted">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="lg:col-span-1">
+          <BrandLock />
+          <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+            The all-in-one business operating system for Indian SMEs.
+          </p>
         </div>
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-slate-100 pt-6 text-sm text-slate-400 sm:flex-row">
-          <span>© {new Date().getFullYear()} Bill2CRM. All rights reserved.</span>
-          <a href="https://leadspree.in" target="_blank" rel="noopener" className="hover:text-slate-600">
+        {COLUMNS.map((col) => (
+          <div key={col.title}>
+            <h3 className="eyebrow">{col.title}</h3>
+            <ul className="mt-4 space-y-2.5">
+              {col.links.map((link) =>
+                link.href.startsWith('#') ? (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ) : (
+                  <li key={link.label}>
+                    <Link
+                      to={link.href}
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Bill2CRM. All rights reserved.</p>
+          <a
+            href="https://leadspree.in"
+            target="_blank"
+            rel="noopener"
+            className="font-mono transition-colors hover:text-foreground"
+          >
             Powered &amp; developed by Leadspree Business Solutions
           </a>
         </div>

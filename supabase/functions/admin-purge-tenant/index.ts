@@ -25,11 +25,43 @@ Deno.serve(async (req) => {
     const { data: isSuperAdmin } = await ownAsCaller.rpc('is_super_admin')
     if (!isSuperAdmin) return new Response('Not authorized', { status: 403 })
 
-    const { tenantId } = (await req.json()) as { tenantId: string }
-    if (!tenantId) return new Response(JSON.stringify({ error: 'tenantId is required' }), { status: 400 })
+    const body = (await req.json().catch(() => ({}))) as {
+      tenantId?: string
+      action?: string
+      userIds?: string[]
+      targetId?: string
+    }
 
     const ownService = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+    // Handle Retry of Failed Identities directly
+    if (body.action === 'retry_users' && Array.isArray(body.userIds) && body.userIds.length > 0) {
+      const { url, serviceRoleKey } = await resolveAppTarget(ownService, undefined, body.targetId)
+      const webApp = createClient(url, serviceRoleKey)
+      const remainingFailures: { userId: string; error: string }[] = []
+
+      for (const userId of body.userIds) {
+        const { error: deleteUserError } = await webApp.auth.admin.deleteUser(userId)
+        if (deleteUserError) {
+          console.warn('Retry failed to delete Web App auth user', userId, deleteUserError)
+          remainingFailures.push({ userId, error: deleteUserError.message })
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true, partialFailures: remainingFailures }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { tenantId } = body
+    if (!tenantId) return new Response(JSON.stringify({ error: 'tenantId is required' }), { status: 400 })
+
     const { data: tenant } = await ownService.from('tenants').select('web_app_org_id').eq('id', tenantId).maybeSingle()
+
+    // Auth-identity deletions that fail mid-purge are collected here and returned to the caller
+    // instead of only being console.warn'd — a tenant can otherwise look fully purged in the
+    // admin UI while an orphaned login identity remains in the Web App's Supabase project.
+    const partialFailures: { userId: string; error: string }[] = []
 
     if (tenant?.web_app_org_id) {
       const { url, serviceRoleKey } = await resolveAppTarget(ownService, tenantId)
@@ -46,16 +78,19 @@ Deno.serve(async (req) => {
       await webApp.from('organizations').delete().eq('id', orgId)
 
       for (const membership of memberships ?? []) {
-        await webApp.auth.admin.deleteUser(membership.user_id as string).catch((err) => {
-          console.warn('Could not delete Web App auth user', membership.user_id, err)
-        })
+        const userId = membership.user_id as string
+        const { error: deleteUserError } = await webApp.auth.admin.deleteUser(userId)
+        if (deleteUserError) {
+          console.warn('Could not delete Web App auth user', userId, deleteUserError)
+          partialFailures.push({ userId, error: deleteUserError.message })
+        }
       }
     }
 
     const { error: purgeError } = await ownAsCaller.rpc('admin_purge_tenant', { p_tenant_id: tenantId })
     if (purgeError) throw purgeError
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, partialFailures }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {

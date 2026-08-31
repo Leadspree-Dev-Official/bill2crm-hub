@@ -1,0 +1,46 @@
+name: Site CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  verify:
+    name: Typecheck, Lint & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck & Build
+        run: npm run build
+        env:
+          # Build-time only. The app tolerates missing values (it falls back to a
+          # placeholder client), so CI does not need real project credentials.
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-anon-key
+          VITE_ROOT_DOMAIN: bill2crm.in
+
+      - name: Verify deploy artifacts are present
+        # These two files are what make the SPA routable and secure in production.
+        # Losing either breaks password-reset deep links or ships the app with no
+        # CSP, and neither failure is visible in local dev.
+        run: |
+          test -f dist/_redirects || { echo "::error::dist/_redirects missing — SPA deep links will 404"; exit 1; }
+          test -f dist/_headers   || { echo "::error::dist/_headers missing — no CSP/HSTS in production"; exit 1; }
+          grep -q "frame-ancestors 'none'" dist/_headers || { echo "::error::CSP is missing frame-ancestors"; exit 1; }
+          echo "Deploy artifacts verified."

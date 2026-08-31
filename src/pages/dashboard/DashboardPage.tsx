@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
 import { supabase, tenantAppUrl } from '@/lib/supabase'
 import { requestAppLaunchUrl } from '@/lib/api/launch-app'
 import type { SubscriptionPlan } from '@/types/database'
-import { AppNav } from '@/components/app-nav'
-import { UpgradeRequestDialog } from '@/components/upgrade-request-dialog'
-import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { DashboardShell } from '@/components/dashboard-shell'
+import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { daysRemaining, formatInr, formatLimit, STATUS_BADGE_VARIANT, STATUS_LABEL } from '@/lib/plan-utils'
-import { Check, Copy, ExternalLink, HardDrive, Loader2, Rocket, Users } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { daysRemaining, formatInr, formatLimit } from '@/lib/plan-utils'
+import { ArrowUpRight, Check, Copy, HardDrive, Loader2, Rocket, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import type { LucideIcon } from 'lucide-react'
 
@@ -21,6 +21,12 @@ export default function DashboardPage() {
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null)
   const [launching, setLaunching] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [copiedLaunch, setCopiedLaunch] = useState(false)
+  const [copyingLaunch, setCopyingLaunch] = useState(false)
+  // Captured once per mount rather than read during render: calling Date.now()
+  // in the render body is impure and can yield a different trial percentage on
+  // each pass under React 19's concurrent rendering.
+  const [renderedAt] = useState(() => Date.now())
 
   useEffect(() => {
     if (!subscription?.plan_id) return
@@ -48,7 +54,39 @@ export default function DashboardPage() {
     if (!tenant) return
     await navigator.clipboard.writeText(tenantAppUrl(tenant.subdomain_slug))
     setCopied(true)
+    toast.success('Instance link copied')
     setTimeout(() => setCopied(false), 1500)
+  }
+
+  async function handleCopyLaunchLink() {
+    setCopyingLaunch(true)
+    const { url, error } = await requestAppLaunchUrl()
+    setCopyingLaunch(false)
+
+    if (error || !url) {
+      if (tenant) {
+        await navigator.clipboard.writeText(tenantAppUrl(tenant.subdomain_slug))
+        setCopiedLaunch(true)
+        toast.success('Instance link copied', {
+          description: 'Workspace address copied to clipboard.',
+        })
+        setTimeout(() => setCopiedLaunch(false), 2000)
+      } else {
+        toast.error("Couldn't generate sign-in link", { description: error ?? 'Please try again in a moment.' })
+      }
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedLaunch(true)
+      toast.success('Sign-in link copied', {
+        description: 'One-time direct sign-in link copied to clipboard.',
+      })
+      setTimeout(() => setCopiedLaunch(false), 2000)
+    } catch {
+      toast.error('Failed to copy to clipboard')
+    }
   }
 
   if (loading) {
@@ -61,11 +99,8 @@ export default function DashboardPage() {
 
   if (!tenant) {
     return (
-      <div className="flex min-h-screen flex-col">
-        <AppNav title="Bill2CRM" />
-        <div className="mx-auto mt-16 max-w-md text-center text-muted-foreground">
-          <p>We&apos;re still setting up your workspace. Refresh in a moment.</p>
-        </div>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+        <p>We&apos;re still setting up your workspace. Refresh in a moment.</p>
       </div>
     )
   }
@@ -76,7 +111,7 @@ export default function DashboardPage() {
     if (!isTrial || !subscription?.trial_ends_at || !subscription?.created_at) return 0
     const start = new Date(subscription.created_at).getTime()
     const end = new Date(subscription.trial_ends_at).getTime()
-    const elapsed = Date.now() - start
+    const elapsed = renderedAt - start
     const total = end - start
     if (total <= 0) return 100
     return Math.min(100, Math.max(0, (elapsed / total) * 100))
@@ -88,145 +123,149 @@ export default function DashboardPage() {
       ? formatInr(plan?.price_yearly_inr)
       : formatInr(plan?.price_monthly_inr)
   const priceSuffix = subscription?.is_lifetime ? 'one-time' : subscription?.billing_cycle === 'yearly' ? '/year' : '/month'
+  const instanceUrl = tenantAppUrl(tenant.subdomain_slug)
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/20">
-      <AppNav title="Bill2CRM" />
-      <main className="mx-auto w-full max-w-4xl space-y-6 p-4 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground">
-              {tenant.business_name.charAt(0).toUpperCase()}
+    <DashboardShell>
+      <section className="rounded-lg border border-border bg-surface p-6">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="truncate text-2xl font-semibold">{tenant.business_name}</h1>
+              <StatusBadge status={tenant.status} />
             </div>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">{tenant.business_name}</h1>
-              <button
-                onClick={handleCopyLink}
-                className="group flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {tenant.subdomain_slug}.bill2crm.in
-                {copied ? (
-                  <Check className="size-3.5 text-primary" />
-                ) : (
-                  <Copy className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
-                )}
-              </button>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <code className="rounded-sm border border-border bg-surface-muted px-2.5 py-1.5 font-mono text-[12px] text-muted-foreground">
+                {instanceUrl}
+              </code>
+              <Button variant="ghost" size="sm" onClick={handleCopyLink} className="h-8">
+                {copied ? <Check className="size-3.5 text-accent" /> : <Copy className="size-3.5" />}
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
             </div>
           </div>
-          <Badge variant={STATUS_BADGE_VARIANT[tenant.status]} className="text-sm">
-            {STATUS_LABEL[tenant.status]}
-          </Badge>
-        </div>
 
-        <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.07] via-primary/[0.02] to-transparent">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Rocket className="size-5 text-primary" /> Your workspace is ready
-            </CardTitle>
-            <CardDescription>Open your Bill2CRM app — no separate login needed.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button size="lg" onClick={handleLaunch} disabled={launching}>
-              {launching ? <Loader2 className="size-4 animate-spin" /> : <ExternalLink className="size-4" />}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button size="lg" onClick={handleLaunch} disabled={launching || copyingLaunch} className="shrink-0">
+              {launching ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
               Launch my app
             </Button>
-          </CardContent>
-        </Card>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-lg"
+                  onClick={handleCopyLaunchLink}
+                  disabled={launching || copyingLaunch}
+                  aria-label="Copy sign-in link"
+                  title="Copy sign-in link"
+                >
+                  {copyingLaunch ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : copiedLaunch ? (
+                    <Check className="size-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{copiedLaunch ? 'Copied!' : 'Copy sign-in link'}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      </section>
 
-        <Card>
-          <CardHeader className="border-b pb-6">
-            <CardTitle className="flex items-center gap-2 text-base">
-              {plan?.name ?? 'Loading plan…'}
-              {subscription?.billing_cycle && !isTrial && (
-                <Badge variant="secondary" className="font-normal">
-                  {BILLING_CYCLE_LABEL[subscription.billing_cycle] ?? subscription.billing_cycle}
-                </Badge>
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <section className="rounded-lg border border-border bg-surface p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow">Subscription</p>
+              <h2 className="mt-2 text-xl font-semibold">{plan?.name ?? 'Loading plan…'}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{plan?.description}</p>
+            </div>
+            <div className="text-right">
+              <p className="tabular font-display text-2xl font-semibold">{isTrial ? 'Free' : (priceLabel ?? '—')}</p>
+              {!isTrial && priceLabel ? (
+                <p className="text-xs text-muted-foreground">{priceSuffix}</p>
+              ) : (
+                <p className="text-xs capitalize text-muted-foreground">
+                  {subscription?.billing_cycle && BILLING_CYCLE_LABEL[subscription.billing_cycle]}
+                </p>
               )}
-            </CardTitle>
-            <CardDescription>{isTrial ? 'Free trial' : 'Current plan'}</CardDescription>
-            <CardAction>
-              <div className="text-right tabular-nums">
-                <div className="text-2xl font-bold">{isTrial ? 'Free' : (priceLabel ?? '—')}</div>
-                {!isTrial && priceLabel && <div className="text-xs text-muted-foreground">{priceSuffix}</div>}
-              </div>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="space-y-5 pt-6">
-            {isTrial && subscription?.trial_ends_at && (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium">Trial progress</span>
-                  <span className="text-muted-foreground">
-                    {trialDays} day{trialDays === 1 ? '' : 's'} left
-                  </span>
-                </div>
-                <Progress value={trialPct} className="h-1.5" />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Ends{' '}
-                  {new Date(subscription.trial_ends_at).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
+            </div>
+          </div>
+
+          {isTrial && subscription?.trial_ends_at ? (
+            <div className="mt-6 rounded-md border border-border bg-surface-muted p-4">
+              <div className="flex items-baseline justify-between">
+                <p className="text-sm font-medium">Free trial</p>
+                <p className="tabular text-sm text-muted-foreground">
+                  {trialDays} day{trialDays === 1 ? '' : 's'} left
                 </p>
               </div>
-            )}
-
-            {!isTrial && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  {subscription?.is_lifetime ? 'Access' : 'Renews'}
-                </span>
-                <span className="font-medium">
-                  {subscription?.is_lifetime
-                    ? 'Lifetime'
-                    : subscription?.current_period_end
-                      ? new Date(subscription.current_period_end).toLocaleDateString('en-IN', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : '—'}
-                </span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <UsageStat
-                icon={Users}
-                label="Users"
-                value={formatLimit(subscription?.user_limit_override ?? plan?.user_limit ?? null)}
-              />
-              <UsageStat
-                icon={HardDrive}
-                label="Storage"
-                value={formatLimit(subscription?.storage_limit_override_mb ?? plan?.storage_limit_mb ?? null, ' MB')}
-              />
+              <Progress value={trialPct} className="mt-3 h-2" />
+              <p className="mt-2.5 font-mono text-[11px] text-muted-foreground">
+                Ends{' '}
+                {new Date(subscription.trial_ends_at).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </p>
             </div>
-          </CardContent>
-          <CardFooter className="flex items-center justify-between border-t pt-6">
-            <p className="text-sm text-muted-foreground">Need more room to grow?</p>
-            <UpgradeRequestDialog
-              tenantId={tenant.id}
-              businessName={tenant.business_name}
-              subdomainSlug={tenant.subdomain_slug}
+          ) : (
+            <div className="mt-6 rounded-md border border-border bg-surface-muted p-4 text-sm text-muted-foreground">
+              {subscription?.is_lifetime
+                ? 'Lifetime access — no renewal.'
+                : subscription?.current_period_end
+                  ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                  : 'Plan is active.'}
+            </div>
+          )}
+
+          <Button asChild className="mt-5 w-full" variant={isTrial ? 'default' : 'outline'}>
+            <Link to="/dashboard/upgrade">
+              {isTrial ? 'Upgrade before the trial ends' : 'Change plan'}
+              <ArrowUpRight className="size-4" />
+            </Link>
+          </Button>
+        </section>
+
+        <section className="rounded-lg border border-border bg-surface p-6">
+          <p className="eyebrow">Usage against plan limits</p>
+
+          <div className="mt-5 space-y-5">
+            <UsageStat
+              icon={Users}
+              label="Users"
+              value={formatLimit(subscription?.user_limit_override ?? plan?.user_limit ?? null)}
             />
-          </CardFooter>
-        </Card>
-      </main>
-    </div>
+            <UsageStat
+              icon={HardDrive}
+              label="Storage"
+              value={formatLimit(subscription?.storage_limit_override_mb ?? plan?.storage_limit_mb ?? null, ' MB')}
+            />
+          </div>
+
+          <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
+            Limits are enforced on your instance. Crossing a limit does not stop billing — we contact you on
+            WhatsApp before anything changes.
+          </p>
+        </section>
+      </div>
+    </DashboardShell>
   )
 }
 
 function UsageStat({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
-      <div className="grid size-9 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
-        <Icon className="size-4" />
-      </div>
-      <div>
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="text-sm font-semibold">{value}</div>
+    <div className="rounded-md border border-border p-4">
+      <div className="flex items-center gap-2.5">
+        <Icon className="size-4 text-primary" />
+        <p className="text-sm font-medium">{label}</p>
+        <p className="tabular ml-auto font-mono text-[13px] text-muted-foreground">{value}</p>
       </div>
     </div>
   )

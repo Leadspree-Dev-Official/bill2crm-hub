@@ -57,7 +57,7 @@ const PILLARS: Pillar[] = [
 
 export function FeaturePillars() {
   return (
-    <section id="features" className="relative px-5 py-20">
+    <section id="features" className="relative border-b border-border px-5 py-20">
       <div className="mx-auto max-w-6xl">
         <SectionHead
           eyebrow="Everything to bill & grow"
@@ -71,19 +71,19 @@ export function FeaturePillars() {
               className={`grid items-center gap-10 lg:grid-cols-2 ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}
             >
               <div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{pillar.eyebrow}</span>
-                <h3 className="mt-2 text-2xl font-bold text-slate-900">{pillar.title}</h3>
-                <p className="mt-3 text-slate-500">{pillar.desc}</p>
+                <p className="eyebrow">{pillar.eyebrow}</p>
+                <h3 className="mt-2 text-2xl font-semibold">{pillar.title}</h3>
+                <p className="mt-3 text-muted-foreground">{pillar.desc}</p>
                 <ul className="mt-4 space-y-2">
                   {pillar.bullets.map((b) => (
-                    <li key={b} className="flex items-start gap-2 text-sm text-slate-600">
-                      <Check className="mt-0.5 size-4 shrink-0 text-emerald-500" />
+                    <li key={b} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="mt-0.5 size-4 shrink-0 text-accent" />
                       {b}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">{pillar.mock}</div>
+              <div className="rounded-lg border border-border bg-surface p-5">{pillar.mock}</div>
             </div>
           ))}
         </div>
@@ -95,52 +95,66 @@ export function FeaturePillars() {
 function InvoiceMock() {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      <div className="flex items-center justify-between border-b border-border pb-3">
         <div>
-          <div className="text-xs text-slate-400">Tax Invoice #INV-0148</div>
-          <div className="font-bold text-slate-900">Sharma Traders</div>
+          <div className="eyebrow">Tax Invoice #INV-0148</div>
+          <div className="font-semibold">Sharma Traders</div>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">Paid</span>
+        <span className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">Paid</span>
       </div>
       {[
         ['Consulting services', '₹18,500'],
         ['CGST + SGST (18%)', '₹3,330'],
       ].map(([l, a]) => (
-        <div key={l} className="flex justify-between text-sm text-slate-500">
+        <div key={l} className="flex justify-between text-sm text-muted-foreground">
           <span>{l}</span>
-          <span className="font-medium text-slate-800">{a}</span>
+          <span className="tabular font-medium text-foreground">{a}</span>
         </div>
       ))}
-      <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-medium text-indigo-700">
-        <span>📱 UPI QR</span> attached — 1-click settlement
+      <div className="flex items-center gap-2 rounded-md bg-primary-soft px-3 py-2 text-xs font-medium text-primary">
+        <span>UPI QR</span> attached — 1-click settlement
       </div>
     </div>
   )
 }
 
 function PosMock() {
-  const tables = ['V', 'S', 'S', 'R', 'V', 'B', 'S', 'V', 'R']
+  const floors = [
+    { name: 'Floor 1', tables: ['V', 'S', 'R'] },
+    { name: 'Floor 2', tables: ['S', 'B', 'V'] },
+    { name: 'Floor 3', tables: ['R', 'V', 'S'] },
+  ]
   const styles: Record<string, string> = {
-    V: 'bg-slate-100 text-slate-400',
-    S: 'bg-amber-100 text-amber-700',
-    R: 'bg-indigo-100 text-indigo-700',
-    B: 'bg-emerald-100 text-emerald-700',
+    V: 'bg-muted text-muted-foreground',
+    S: 'bg-warning/15 text-warning',
+    R: 'bg-primary-soft text-primary',
+    B: 'bg-accent-soft text-accent',
   }
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between text-xs text-slate-400">
-        <span>Floor 1 — Table layout</span>
-        <span className="rounded-full bg-slate-100 px-2 py-0.5">Live</span>
+      <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
+        <span>Table layout</span>
+        <span className="rounded-full bg-muted px-2 py-0.5">Live</span>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {tables.map((t, i) => (
-          <div key={i} className={`grid aspect-square place-items-center rounded-lg text-xs font-bold ${styles[t]}`}>
-            T{i + 1}
+      <div className="space-y-2.5">
+        {floors.map((floor, fi) => (
+          <div key={floor.name} className="flex items-center gap-2">
+            <span className="w-12 shrink-0 text-[11px] text-muted-foreground">{floor.name}</span>
+            <div className="grid flex-1 grid-cols-3 gap-1.5">
+              {floor.tables.map((t, i) => (
+                <div
+                  key={i}
+                  className={`grid h-9 place-items-center rounded-md text-[11px] font-bold ${styles[t]}`}
+                >
+                  T{fi * 3 + i + 1}
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
-      <div className="mt-3 flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-        <span className="font-semibold text-slate-700">KOT #204</span> sent to kitchen — 2 new items
+      <div className="mt-3 flex items-center gap-2 rounded-md bg-surface-muted px-3 py-2 text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">KOT #204</span> sent to kitchen — 2 new items
       </div>
     </div>
   )
@@ -155,12 +169,12 @@ function CrmMock() {
   return (
     <div className="space-y-2">
       {leads.map((l) => (
-        <div key={l.name} className="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2.5">
+        <div key={l.name} className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
           <div>
-            <div className="text-sm font-semibold text-slate-800">{l.name}</div>
-            <div className="text-xs text-slate-400">{l.note}</div>
+            <div className="text-sm font-semibold">{l.name}</div>
+            <div className="text-xs text-muted-foreground">{l.note}</div>
           </div>
-          <span className="rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-semibold text-indigo-600">
+          <span className="rounded-full bg-primary-soft px-2 py-1 text-[10px] font-semibold text-primary">
             {l.tag}
           </span>
         </div>
@@ -180,16 +194,16 @@ function InventoryMock() {
       {items.map((it) => (
         <div key={it.name}>
           <div className="mb-1 flex justify-between text-xs">
-            <span className="text-slate-600">{it.name}</span>
+            <span className="text-foreground">{it.name}</span>
             {it.status === 'low' ? (
-              <span className="font-semibold text-red-500">Low stock</span>
+              <span className="font-semibold text-destructive">Low stock</span>
             ) : (
-              <span className="text-slate-400">{it.pct}%</span>
+              <span className="text-muted-foreground">{it.pct}%</span>
             )}
           </div>
-          <div className="h-1.5 rounded-full bg-slate-100">
+          <div className="h-1.5 rounded-full bg-muted">
             <div
-              className={`h-1.5 rounded-full ${it.status === 'low' ? 'bg-red-400' : 'bg-emerald-400'}`}
+              className={`h-1.5 rounded-full ${it.status === 'low' ? 'bg-destructive' : 'bg-accent'}`}
               style={{ width: `${it.pct}%` }}
             />
           </div>
@@ -202,17 +216,17 @@ function InventoryMock() {
 function PayrollMock() {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 text-sm">
-        <span className="text-slate-600">Present today</span>
-        <span className="font-bold text-slate-900">24 / 26</span>
+      <div className="flex items-center justify-between rounded-md bg-surface-muted px-3 py-2.5 text-sm">
+        <span className="text-muted-foreground">Present today</span>
+        <span className="font-semibold">24 / 26</span>
       </div>
-      <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 text-sm">
-        <span className="text-slate-600">Leave requests pending</span>
-        <span className="font-bold text-amber-600">3</span>
+      <div className="flex items-center justify-between rounded-md bg-surface-muted px-3 py-2.5 text-sm">
+        <span className="text-muted-foreground">Leave requests pending</span>
+        <span className="font-semibold text-warning">3</span>
       </div>
-      <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2.5 text-sm">
-        <span className="text-emerald-700">Payslips generated</span>
-        <span className="font-bold text-emerald-700">26 ✓</span>
+      <div className="flex items-center justify-between rounded-md bg-accent-soft px-3 py-2.5 text-sm">
+        <span className="text-accent">Payslips generated</span>
+        <span className="font-semibold text-accent">26 ✓</span>
       </div>
     </div>
   )
@@ -224,15 +238,15 @@ function LedgerMock() {
     <div>
       <div className="mb-3 flex items-end gap-1.5" style={{ height: 72 }}>
         {bars.map((b, i) => (
-          <div key={i} className="flex-1 rounded-t bg-indigo-200" style={{ height: `${b}%` }} />
+          <div key={i} className="flex-1 rounded-t bg-primary/25" style={{ height: `${b}%` }} />
         ))}
       </div>
-      <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-sm">
-        <span className="text-slate-500">Net Profit (MTD)</span>
-        <span className="font-bold text-emerald-600">₹2,84,600</span>
+      <div className="flex items-center justify-between border-t border-border pt-3 text-sm">
+        <span className="text-muted-foreground">Net Profit (MTD)</span>
+        <span className="tabular font-semibold text-accent">₹2,84,600</span>
       </div>
-      <div className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
-        📤 Export to Tally XML
+      <div className="mt-3 flex items-center justify-center gap-2 rounded-md bg-surface-muted px-3 py-2 text-xs font-medium text-muted-foreground">
+        Export to Tally XML
       </div>
     </div>
   )
