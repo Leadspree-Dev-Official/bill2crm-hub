@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { BillingCycle, TenantStatus } from '@/types/database'
+import type { AppTargetOccupancy, AppTargetTier, BillingCycle, TenantStatus } from '@/types/database'
 
 export interface SetTenantEntitlementInput {
   tenantId: string
@@ -140,35 +140,53 @@ export async function revokeSuperAdmin(userId: string) {
   return { error: error?.message ?? null }
 }
 
+/** capacitySeatsOverride null means "use the tier default". It is required for tier 'hosted',
+ *  where the ceiling depends on the VPS rather than on anything the tier implies. */
 export async function createAppTarget(input: {
   label: string
   supabaseUrl: string
   serviceRoleKey: string
   isDefault: boolean
+  tier: AppTargetTier
+  capacitySeatsOverride: number | null
 }) {
   const { data, error } = await supabase.rpc('admin_create_app_target', {
     p_label: input.label,
     p_supabase_url: input.supabaseUrl,
     p_service_role_key: input.serviceRoleKey,
     p_is_default: input.isDefault,
+    p_tier: input.tier,
+    p_capacity_seats_override: input.capacitySeatsOverride,
   })
   return { id: data as string | null, error: error?.message ?? null }
 }
 
-/** Pass serviceRoleKey only to rotate it — omit/blank to leave the stored key untouched. */
+/** Pass serviceRoleKey only to rotate it — omit/blank to leave the stored key untouched.
+ *  capacitySeatsOverride is always applied as given, so passing null on a free/pro server
+ *  resets it back to that tier's default. */
 export async function updateAppTarget(input: {
   targetId: string
   label: string
   supabaseUrl: string
   serviceRoleKey?: string
+  tier: AppTargetTier
+  capacitySeatsOverride: number | null
 }) {
   const { error } = await supabase.rpc('admin_update_app_target', {
     p_target_id: input.targetId,
     p_label: input.label,
     p_supabase_url: input.supabaseUrl,
     p_service_role_key: input.serviceRoleKey || null,
+    p_tier: input.tier,
+    p_capacity_seats_override: input.capacitySeatsOverride,
   })
   return { error: error?.message ?? null }
+}
+
+/** Seat occupancy per server, for /admin → App links. */
+export async function listAppTargetOccupancy() {
+  const { data, error } = await supabase.rpc('admin_app_target_occupancy')
+  return { rows: (data ?? []) as AppTargetOccupancy[], error: error?.message ?? null }
 }
 
 export async function setDefaultAppTarget(targetId: string) {

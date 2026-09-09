@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import {
   createAppTarget,
   deleteAppTarget,
+  listAppTargetOccupancy,
   setDefaultAppTarget,
   testAppTarget,
   type TestAppTargetResult,
   updateAppTarget,
 } from '@/lib/api/admin'
-import type { AppTarget } from '@/types/database'
+import { APP_TARGET_TIER_LABELS, type AppTargetOccupancy, type AppTargetTier } from '@/types/database'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,12 +32,29 @@ import { AdminPageHeader } from '@/components/admin/admin-page-header'
 import { toast } from 'sonner'
 import { Activity, CheckCircle2, Loader2, Plus, RefreshCw, Star, Trash2, XCircle } from 'lucide-react'
 
-interface AppTargetRow extends AppTarget {
-  tenant_count: number
-}
+type AppTargetRow = AppTargetOccupancy
 
-const emptyForm = { id: '', label: '', supabaseUrl: '', serviceRoleKey: '', isDefault: false }
+const emptyForm = {
+  id: '',
+  label: '',
+  supabaseUrl: '',
+  serviceRoleKey: '',
+  isDefault: false,
+  tier: 'free' as AppTargetTier,
+  /** Blank = fall back to the tier default. Required for 'hosted'. */
+  capacitySeats: '',
+}
 type FormState = typeof emptyForm
+
+/** Mirrors app_target_tier_default_seats() in 20260909000000_app_target_capacity_tiers.sql —
+ *  shown as the placeholder so an admin can see what they'd get by leaving capacity blank. */
+const TIER_DEFAULT_SEATS: Record<AppTargetTier, number | null> = { free: 25, pro: 200, hosted: null }
+
+const TIER_HINT: Record<AppTargetTier, string> = {
+  free: 'Supabase free tier — 500MB database, 50k MAU. Pauses after 7 days idle.',
+  pro: 'Supabase Pro tier — 8GB database, 100k MAU.',
+  hosted: 'Self-hosted on DigitalOcean or Contabo. Capacity depends on the VPS, so enter it explicitly.',
+}
 
 export default function AppLinksPage() {
   const [targets, setTargets] = useState<AppTargetRow[]>([])
@@ -50,17 +68,11 @@ export default function AppLinksPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase.from('app_targets').select('*, tenants(count)').order('created_at')
-
+    const { rows, error } = await listAppTargetOccupancy()
     if (error) {
-      toast.error('Could not load app links', { description: error.message })
+      toast.error('Could not load app links', { description: error })
     } else {
-      setTargets(
-        (data ?? []).map((row) => ({
-          ...row,
-          tenant_count: Array.isArray(row.tenants) ? (row.tenants[0]?.count ?? 0) : 0,
-        })) as AppTargetRow[],
-      )
+      setTargets(rows)
     }
     setLoading(false)
   }, [])
@@ -75,7 +87,18 @@ export default function AppLinksPage() {
   }
 
   function openForEdit(target: AppTargetRow) {
-    setForm({ id: target.id, label: target.label, supabaseUrl: target.supabase_url, serviceRoleKey: '', isDefault: target.is_default })
+    // Show the number only when it differs from the tier default, so an untouched free/pro
+    // server keeps rendering the placeholder rather than pinning itself to a literal value.
+    const tierDefault = TIER_DEFAULT_SEATS[target.tier]
+    setForm({
+      id: target.target_id,
+      label: target.label,
+      supabaseUrl: target.supabase_url,
+      serviceRoleKey: '',
+      isDefault: target.is_default,
+      tier: target.tier,
+      capacitySeats: target.capacity_seats === tierDefault ? '' : String(target.capacity_seats),
+    })
     setOpen(true)
   }
 
@@ -89,6 +112,23 @@ export default function AppLinksPage() {
       return
     }
 
+    const trimmedCapacity = form.capacitySeats.trim()
+    if (trimmedCapacity && !/^\d+$/.test(trimmedCapacity)) {
+      toast.error('Capacity must be a whole number of seats')
+      return
+    }
+    const capacitySeatsOverride = trimmedCapacity ? Number(trimmedCapacity) : null
+    if (capacitySeatsOverride !== null && capacitySeatsOverride < 1) {
+      toast.error('Capacity must be at least 1 seat')
+      return
+    }
+    if (form.tier === 'hosted' && capacitySeatsOverride === null) {
+      toast.error('A hosted server needs an explicit seat capacity', {
+        description: "Supabase's tiers imply a ceiling; a DigitalOcean or Contabo box doesn't.",
+      })
+      return
+    }
+
     setSaving(true)
     const { error } = form.id
       ? await updateAppTarget({
@@ -96,12 +136,16 @@ export default function AppLinksPage() {
           label: form.label.trim(),
           supabaseUrl: form.supabaseUrl.trim(),
           serviceRoleKey: form.serviceRoleKey.trim(),
+          tier: form.tier,
+          capacitySeatsOverride,
         })
       : await createAppTarget({
           label: form.label.trim(),
           supabaseUrl: form.supabaseUrl.trim(),
           serviceRoleKey: form.serviceRoleKey.trim(),
           isDefault: form.isDefault,
+          tier: form.tier,
+          capacitySeatsOverride,
         })
     if (form.id && !error && form.isDefault) {
       await setDefaultAppTarget(form.id)
@@ -118,10 +162,10 @@ export default function AppLinksPage() {
   }
 
   async function handleTestConnection(target: AppTargetRow) {
-    setTestingId(target.id)
-    const result = await testAppTarget(target.id)
+    setTestingId(target.target_id)
+    const result = await testAppTarget(target.target_id)
     setTestingId(null)
-    setHealthMap((prev) => ({ ...prev, [target.id]: result }))
+    setHealthMap((prev) => ({ ...prev, [target.target_id]: result }))
     if (result.ok) {
       toast.success(`${target.label} is online`, {
         description: `Response time: ${result.latencyMs}ms · DB and Auth operational`,
@@ -136,15 +180,15 @@ export default function AppLinksPage() {
   async function handleTestAll() {
     setTestingAll(true)
     for (const target of targets) {
-      const result = await testAppTarget(target.id)
-      setHealthMap((prev) => ({ ...prev, [target.id]: result }))
+      const result = await testAppTarget(target.target_id)
+      setHealthMap((prev) => ({ ...prev, [target.target_id]: result }))
     }
     setTestingAll(false)
     toast.success('Fleet health check completed')
   }
 
   async function handleSetDefault(target: AppTargetRow) {
-    const { error } = await setDefaultAppTarget(target.id)
+    const { error } = await setDefaultAppTarget(target.target_id)
     if (error) {
       toast.error('Could not set default', { description: error })
       return
@@ -154,7 +198,7 @@ export default function AppLinksPage() {
   }
 
   async function handleDelete(target: AppTargetRow) {
-    const { error } = await deleteAppTarget(target.id)
+    const { error } = await deleteAppTarget(target.target_id)
     if (error) {
       toast.error('Could not delete app link', { description: error })
       return
@@ -169,10 +213,10 @@ export default function AppLinksPage() {
         title="App links"
         description={
           <>
-            Where "Launch my app" and entitlement sync send a tenant. New signups get whichever link is default
-            right now; a specific tenant can be pointed at a different one from{' '}
-            <span className="font-medium text-foreground">Tenants → Reassign</span> — useful for a dedicated,
-            private cloud instance.
+            Where "Launch my app" and entitlement sync send a tenant. New signups go to the default link while it
+            has seats free, then overflow to whichever server has the most room; a specific tenant can be pointed
+            at a different one from <span className="font-medium text-foreground">Tenants → Reassign</span> —
+            useful for a dedicated, private cloud instance.
           </>
         }
         actions={
@@ -223,6 +267,45 @@ export default function AppLinksPage() {
                       autoComplete="off"
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Tier</Label>
+                      <Select
+                        value={form.tier}
+                        onValueChange={(v) => setForm({ ...form, tier: v as AppTargetTier })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(APP_TARGET_TIER_LABELS) as AppTargetTier[]).map((tier) => (
+                            <SelectItem key={tier} value={tier}>
+                              {APP_TARGET_TIER_LABELS[tier]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Capacity{' '}
+                        <span className="font-normal text-muted-foreground">
+                          {form.tier === 'hosted' ? '(required)' : '(seats)'}
+                        </span>
+                      </Label>
+                      <Input
+                        inputMode="numeric"
+                        placeholder={
+                          form.tier === 'hosted'
+                            ? 'e.g. 50'
+                            : `Tier default — ${TIER_DEFAULT_SEATS[form.tier]}`
+                        }
+                        value={form.capacitySeats}
+                        onChange={(e) => setForm({ ...form, capacitySeats: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{TIER_HINT[form.tier]}</p>
                   <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
                     <Label htmlFor="is-default">Default for new signups</Label>
                     <Switch
@@ -258,6 +341,8 @@ export default function AppLinksPage() {
               <TableRow className="hover:bg-transparent">
                 <TableHead>Label</TableHead>
                 <TableHead>Supabase URL</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>Capacity</TableHead>
                 <TableHead>Tenants</TableHead>
                 <TableHead>Health</TableHead>
                 <TableHead>Status</TableHead>
@@ -266,13 +351,42 @@ export default function AppLinksPage() {
             </TableHeader>
             <TableBody>
               {targets.map((target) => {
-                const health = healthMap[target.id]
-                const isTesting = testingId === target.id || testingAll
+                const health = healthMap[target.target_id]
+                const isTesting = testingId === target.target_id || testingAll
 
                 return (
-                  <TableRow key={target.id}>
+                  <TableRow key={target.target_id}>
                     <TableCell className="font-medium">{target.label}</TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">{target.supabase_url}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-normal">
+                        {APP_TARGET_TIER_LABELS[target.tier]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="min-w-[150px]">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full rounded-full ${
+                              target.is_over_capacity
+                                ? 'bg-rose-500'
+                                : target.seats_used / target.capacity_seats >= 0.8
+                                  ? 'bg-amber-500'
+                                  : 'bg-emerald-500'
+                            }`}
+                            style={{
+                              width: `${Math.min(100, Math.round((target.seats_used / target.capacity_seats) * 100))}%`,
+                            }}
+                          />
+                        </div>
+                        <span
+                          className={`tabular text-xs ${target.is_over_capacity ? 'font-medium text-rose-600 dark:text-rose-400' : 'text-muted-foreground'}`}
+                        >
+                          {target.seats_used}/{target.capacity_seats}
+                          {target.is_over_capacity && ' · over'}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell className="tabular text-muted-foreground">{target.tenant_count}</TableCell>
                     <TableCell>
                       {isTesting ? (

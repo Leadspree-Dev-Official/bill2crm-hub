@@ -35,11 +35,33 @@ database via Supabase Vault, never as a function secret or a plain column.)
 
 Sign in as the bootstrap super admin (step 9), open `/admin → App links → Add app link`, and
 fill in the Web App project's URL and `service_role` key (Project Settings → API — never the
-anon key). Mark it as the default. Every tenant that signs up from here on is stamped with
-whichever app link is default *at the moment they sign up* — changing the default later never
-moves an already-provisioned tenant. A specific tenant can also be pointed at a different,
-dedicated app link from `/admin → Tenants → Reassign` (e.g. a private/personal cloud instance
-for one customer) independently of the default.
+anon key). Mark it as the default.
+
+Each app link also carries a **tier** and a **seat capacity**:
+
+| Tier | Meaning | Default capacity |
+|---|---|---|
+| Free | Supabase free tier (500MB DB, 50k MAU, pauses after 7 days idle) | 25 seats |
+| Pro | Supabase Pro tier (8GB DB, 100k MAU) | 200 seats |
+| Hosted | Self-hosted on DigitalOcean or Contabo | **none — you must enter it** |
+
+Free/Pro capacities are starting defaults you can override per server; Hosted has no default
+because the ceiling depends on the VPS specs. The defaults live in
+`app_target_tier_default_seats()` if you want to change them fleet-wide.
+
+New signups go to the default app link **while it has seats free**, then overflow to whichever
+other server has the most room (`pick_app_target_for_seats()`). If the whole fleet is full,
+signup still falls back to the default rather than failing, and that server shows as *over*
+in `/admin → App links`. Changing the default later never moves an already-provisioned tenant.
+A specific tenant can also be pointed at a different, dedicated app link from
+`/admin → Tenants → Reassign` (e.g. a private/personal cloud instance for one customer).
+
+Seats are counted from each tenant's entitlement (`user_limit_override`, else the plan's
+`user_limit`). Plans with unlimited users — Trial, Private Cloud, Private Cloud Lifetime —
+have no finite number to count, so they are charged a flat weight from
+`fleet_unlimited_seat_weight()` (currently 5). Since every signup starts on Trial, that weight
+is effectively "how many fresh signups a server absorbs before it reads as full" — tune it
+there.
 
 ## 3. Deploy the Edge Functions
 

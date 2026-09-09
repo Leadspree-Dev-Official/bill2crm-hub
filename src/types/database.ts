@@ -20,6 +20,17 @@ export interface Tenant {
   updated_at: string
 }
 
+/** Hosting tier of a Web App server. Drives its default seat capacity:
+ *  free = Supabase free tier, pro = Supabase Pro tier, hosted = self-hosted on
+ *  DigitalOcean/Contabo (capacity depends on the VPS, so it must be entered explicitly). */
+export type AppTargetTier = 'free' | 'pro' | 'hosted'
+
+export const APP_TARGET_TIER_LABELS: Record<AppTargetTier, string> = {
+  free: 'Free',
+  pro: 'Pro',
+  hosted: 'Hosted',
+}
+
 /** A Web App deployment super admins can point tenants at. The service_role key itself never
  *  appears here — it's Vault-encrypted server-side and only resolved inside Edge Functions. */
 export interface AppTarget {
@@ -27,6 +38,25 @@ export interface AppTarget {
   label: string
   supabase_url: string
   is_default: boolean
+  tier: AppTargetTier
+  /** Explicit seat ceiling. Null means "use the tier default". Always set for `hosted`. */
+  capacity_seats_override: number | null
+  created_at: string
+}
+
+/** One row of `admin_app_target_occupancy()`. Capacity is enforced in seats; tenant_count is
+ *  reported alongside for context. */
+export interface AppTargetOccupancy {
+  target_id: string
+  label: string
+  supabase_url: string
+  tier: AppTargetTier
+  is_default: boolean
+  capacity_seats: number
+  seats_used: number
+  seats_available: number
+  tenant_count: number
+  is_over_capacity: boolean
   created_at: string
 }
 
