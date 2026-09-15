@@ -99,6 +99,41 @@ test('AUTH-006 the service_role-only target resolvers reject anon outright', { s
   }
 })
 
+// ---------------------------------------------------------------------------
+// Internal helpers must not be reachable from the public API
+// ---------------------------------------------------------------------------
+
+// Postgres grants EXECUTE to PUBLIC by default, which includes `anon`. A migration that adds a
+// SECURITY DEFINER helper and forgets the matching `revoke` therefore publishes an
+// RLS-bypassing function to the internet, silently and with no error anywhere.
+//
+// That is exactly what 20260909000000_app_target_capacity_tiers.sql did: it locked down its four
+// admin_*/resolve_* entry points and left these six world-executable. Live, anonymously,
+// app_target_tier_default_seats('free') answered 25 and fleet_unlimited_seat_weight() answered 5,
+// and pick_app_target_for_seats() would hand out a real app_targets UUID to feed to
+// app_target_seats_used(). Closed by 20260916000000_lock_down_fleet_capacity_helpers.sql.
+const INTERNAL_HELPERS = [
+  ['app_target_tier_default_seats', { p_tier: 'free' }],
+  ['app_target_capacity_seats', { p_target_id: NO_SUCH_ID }],
+  ['fleet_unlimited_seat_weight', {}],
+  ['tenant_seat_demand', { p_tenant_id: NO_SUCH_ID }],
+  ['app_target_seats_used', { p_target_id: NO_SUCH_ID }],
+  ['pick_app_target_for_seats', { p_seats: 1 }],
+]
+
+for (const [fn, args] of INTERNAL_HELPERS) {
+  test(`AUTH-012 internal helper ${fn}() is not executable by anon`, { skip }, async () => {
+    const r = await rpc(cfg, fn, args)
+    assert.ok(
+      r.status >= 400,
+      `${fn}() is world-executable and SECURITY DEFINER, so it reads past RLS for any anonymous ` +
+        `caller. It answered HTTP ${r.status} with ${JSON.stringify(r.body).slice(0, 120)}. ` +
+        `Add "revoke all on function public.${fn} from public, anon, authenticated;" to the ` +
+        `migration that creates it.`,
+    )
+  })
+}
+
 test('AUTH-007 is_super_admin() is false for an unauthenticated caller', { skip }, async () => {
   const r = await rpc(cfg, 'is_super_admin', {})
   if (r.status >= 400) return // revoked from anon entirely, also fine
