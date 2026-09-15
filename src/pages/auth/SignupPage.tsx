@@ -4,11 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useAuth } from '@/lib/auth-context'
+import { ROOT_DOMAIN } from '@/lib/supabase'
 import { AuthLayout } from '@/components/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Loader2 } from 'lucide-react'
+import { Loader2, MailCheck } from 'lucide-react'
 
 const schema = z.object({
   businessName: z.string().min(2, 'Enter your business name'),
@@ -18,11 +19,15 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-function slugify(value: string) {
+/** Mirrors provision_tenant_for_new_user() in 20260821213300_signup_trigger.sql, which is what
+ *  actually assigns the subdomain. That collapses each run of non-alphanumerics to a single
+ *  hyphen and trims hyphens from the ends; stripping them outright (as this preview used to)
+ *  promised "sharmatraders" to someone the database would then place on "sharma-traders". */
+export function slugify(value: string) {
   return value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '')
-    .slice(0, 24)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 }
 
 export default function SignupPage() {
@@ -30,6 +35,7 @@ export default function SignupPage() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState<string | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -40,11 +46,19 @@ export default function SignupPage() {
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
-    const { error } = await signUp(values.email, values.password, values.businessName)
+    const { error, needsEmailConfirmation } = await signUp(values.email, values.password, values.businessName)
     setSubmitting(false)
 
     if (error) {
       form.setError('email', { message: error })
+      return
+    }
+    // The live control plane has email confirmation on, so there is no session yet. Sending the
+    // user to /dashboard here would hit RequireAuth, find no session and bounce them to /login
+    // with nothing on screen explaining that their workspace is waiting on a click in their
+    // inbox — which is what every production signup did before this branch.
+    if (needsEmailConfirmation) {
+      setAwaitingConfirmation(values.email)
       return
     }
     setSubmitted(true)
@@ -64,7 +78,19 @@ export default function SignupPage() {
         </>
       }
     >
-      {submitted ? (
+      {awaitingConfirmation ? (
+        <div className="rounded-lg border border-accent/30 bg-accent-soft p-5">
+          <MailCheck className="size-5 text-accent" />
+          <p className="mt-3 text-sm font-medium">Confirm your email to finish</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+            We sent a confirmation link to <span className="font-medium text-foreground">{awaitingConfirmation}</span>.
+            Click it and your 7-day trial workspace opens straight away. Check spam before writing to support.
+          </p>
+          <Button variant="outline" className="mt-4" onClick={() => setAwaitingConfirmation(null)}>
+            Use a different email
+          </Button>
+        </div>
+      ) : submitted ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Setting up your workspace…
         </div>
@@ -81,7 +107,7 @@ export default function SignupPage() {
                     <Input placeholder="e.g. Sharma Traders" autoComplete="organization" {...field} />
                   </FormControl>
                   {subdomain ? (
-                    <p className="font-mono text-[11px] text-muted-foreground">Instance: {subdomain}.bill2crm.in</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">Instance: {subdomain}.{ROOT_DOMAIN}</p>
                   ) : null}
                   <FormMessage />
                 </FormItem>

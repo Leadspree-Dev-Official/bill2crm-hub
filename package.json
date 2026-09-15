@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "fleet": "node scripts/fleet-manager.mjs"
+    "fleet": "node scripts/fleet-manager.mjs",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "test:auth": "node --test tests/auth-perimeter.test.mjs tests/route-guards.test.mjs tests/password-recovery.test.mjs tests/signup-contract.test.mjs",
+    "test:drift": "node --test tests/schema-drift.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

@@ -16,12 +16,41 @@ interface AuthContextValue {
    *  other "already signed in" session and bouncing straight to the dashboard. */
   isPasswordRecovery: boolean
   refresh: () => Promise<void>
-  signUp: (email: string, password: string, businessName: string) => Promise<{ error: string | null }>
+  /** `needsEmailConfirmation` is true when the project requires the user to click a
+   *  confirmation link before a session exists — Supabase returns no session in that case, so
+   *  the caller must show "check your email" rather than routing to a guarded page. */
+  signUp: (
+    email: string,
+    password: string,
+    businessName: string,
+  ) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+/** Per-tab marker that this tab is in the middle of a password recovery. sessionStorage, not
+ *  localStorage: it must not leak into other tabs or outlive the tab, and it is not a secret —
+ *  the recovery session itself is what authorizes the password change. */
+const RECOVERY_FLAG_KEY = 'bill2crm_site_password_recovery'
+
+export function readRecoveryFlag(): boolean {
+  try {
+    return window.sessionStorage.getItem(RECOVERY_FLAG_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function writeRecoveryFlag(on: boolean) {
+  try {
+    if (on) window.sessionStorage.setItem(RECOVERY_FLAG_KEY, '1')
+    else window.sessionStorage.removeItem(RECOVERY_FLAG_KEY)
+  } catch {
+    /* private mode / storage disabled — the in-memory flag still covers the common path */
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -73,16 +102,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true
 
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
-      if (!active) return
-      setSession(currentSession)
-      await loadProfile(currentSession?.user ?? null)
-      if (active) setLoading(false)
-    })
+    // A recovery session that was already flagged in this tab must survive a reload of
+    // /reset-password — the PASSWORD_RECOVERY event fires once, when the link's hash is
+    // consumed, and never again. Without this the reloaded page sees an ordinary session and
+    // the guards send the user to the dashboard with their password still unchanged.
+    if (readRecoveryFlag()) setIsPasswordRecovery(true)
+
+    supabase.auth
+      .getSession()
+      .then(async ({ data: { session: currentSession } }) => {
+        if (!active) return
+        setSession(currentSession)
+        await loadProfile(currentSession?.user ?? null)
+      })
+      .catch((err) => {
+        // Never leave `loading` true on a failure: every guard renders a full-screen spinner
+        // while it is, so a transient network error would strand the whole app there forever.
+        console.error('Failed to restore session', err)
+        if (!active) return
+        setSession(null)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
     const { data: subscriptionHandle } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (event === 'PASSWORD_RECOVERY') setIsPasswordRecovery(true)
-      if (event === 'USER_UPDATED' || event === 'SIGNED_OUT') setIsPasswordRecovery(false)
+      if (!active) return
+      if (event === 'PASSWORD_RECOVERY') {
+        writeRecoveryFlag(true)
+        setIsPasswordRecovery(true)
+      }
+      if (event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
+        writeRecoveryFlag(false)
+        setIsPasswordRecovery(false)
+      }
       setSession(currentSession)
       await loadProfile(currentSession?.user ?? null)
     })
@@ -94,12 +147,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile])
 
   const signUp = useCallback(async (email: string, password: string, businessName: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { businessName } },
+      options: { data: { businessName }, emailRedirectTo: `${window.location.origin}/login` },
     })
-    return { error: error?.message ?? null }
+    if (error) return { error: error.message, needsEmailConfirmation: false }
+    // With email confirmation enabled on the project (the live control plane has
+    // mailer_autoconfirm off) signUp succeeds but returns session: null. Routing to a guarded
+    // route here would bounce the user straight back to /login with nothing explaining why.
+    return { error: null, needsEmailConfirmation: data.session === null }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -108,6 +165,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
+    writeRecoveryFlag(false)
+    setIsPasswordRecovery(false)
     await supabase.auth.signOut()
   }, [])
 

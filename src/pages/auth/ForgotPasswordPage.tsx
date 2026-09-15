@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthLayout
       title="Reset your password"
-      subtitle="We'll email a reset link to the address on the account. It stays valid for 30 minutes."
+      subtitle="We'll email a reset link to the address on the account. It stays valid for one hour."
       footer={
         <>
           Remembered it?{' '}

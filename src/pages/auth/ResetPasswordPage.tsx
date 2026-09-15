@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
+import { readRecoveryFlag, useAuth, writeRecoveryFlag } from '@/lib/auth-context'
 import { AuthLayout } from '@/components/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,7 @@ type Status = 'checking' | 'ready' | 'invalid'
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
+  const { isPasswordRecovery } = useAuth()
   const [status, setStatus] = useState<Status>('checking')
   const [submitting, setSubmitting] = useState(false)
 
@@ -38,20 +40,40 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     let active = true
 
-    // Supabase's recovery email links here with the recovery tokens in the URL hash. Its
-    // client-side auth listener parses that hash and establishes a session automatically,
-    // firing a PASSWORD_RECOVERY event when it does — that's our cue to show the form. We don't
-    // trust plain session-presence here (a normal signed-in visit shouldn't count).
+    // Supabase parses the recovery hash and establishes the session during createClient(), which
+    // runs at module import — before this component (or even React) mounts. The
+    // PASSWORD_RECOVERY event is emitted once, to whoever is listening at that moment, and
+    // Supabase strips the hash on its way through. So a listener attached here routinely misses
+    // the event AND finds an empty hash: the earlier implementation then declared a perfectly
+    // valid reset link "invalid or expired" after 2.5s. Three sources are consulted instead,
+    // in the order they become reliable.
+    //
+    //   1. AuthProvider's listener is registered at app mount and persists the event in
+    //      sessionStorage, so `isPasswordRecovery` survives both the race and a page reload.
+    //   2. The hash, if it somehow has not been consumed yet.
+    //   3. A late event, for the case where this component mounts first.
+    if (isPasswordRecovery || readRecoveryFlag() || window.location.hash.includes('type=recovery')) {
+      setStatus('ready')
+    }
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (!active) return
       if (event === 'PASSWORD_RECOVERY') setStatus('ready')
     })
 
-    // Fallback for the (unlikely) case the event fires before this listener attaches: a
-    // recovery link's hash still carries type=recovery even after Supabase consumes it.
-    const timeout = setTimeout(() => {
+    // Only after giving the async client initialisation a chance to finish do we conclude the
+    // link is bad — and we require an actual absence of a session to say so, rather than
+    // inferring it from a hash Supabase has already cleaned up.
+    const timeout = setTimeout(async () => {
       if (!active) return
-      setStatus((current) => (current === 'checking' ? (window.location.hash.includes('type=recovery') ? 'ready' : 'invalid') : current))
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!active) return
+      setStatus((current) => {
+        if (current !== 'checking') return current
+        return isPasswordRecovery || readRecoveryFlag() || session ? 'ready' : 'invalid'
+      })
     }, 2500)
 
     return () => {
@@ -59,7 +81,7 @@ export default function ResetPasswordPage() {
       sub.subscription.unsubscribe()
       clearTimeout(timeout)
     }
-  }, [])
+  }, [isPasswordRecovery])
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
@@ -73,6 +95,7 @@ export default function ResetPasswordPage() {
 
     // Force a fresh sign-in with the new password rather than dropping them straight into the
     // dashboard on the recovery session.
+    writeRecoveryFlag(false)
     await supabase.auth.signOut()
     setSubmitting(false)
     toast.success('Password updated', { description: 'Sign in with your new password.' })
@@ -104,7 +127,7 @@ export default function ResetPasswordPage() {
           <ShieldAlert className="size-5 text-destructive" />
           <p className="mt-3 text-sm font-medium">This link is invalid or has expired</p>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            Reset links stay valid for 30 minutes. Request a new one and try again.
+            Reset links stay valid for one hour. Request a new one and try again.
           </p>
           <Button variant="outline" className="mt-4" asChild>
             <Link to="/forgot-password">Request a new link</Link>

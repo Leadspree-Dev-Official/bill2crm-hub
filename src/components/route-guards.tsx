@@ -1,5 +1,11 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
+import {
+  decideRedirectIfAuthed,
+  decideRequireAuth,
+  decideRequireSuperAdmin,
+  type GuardState,
+} from '@/lib/route-decision'
 import { Loader2 } from 'lucide-react'
 
 function FullScreenSpinner() {
@@ -10,34 +16,41 @@ function FullScreenSpinner() {
   )
 }
 
+/** The decisions themselves live in @/lib/route-decision as pure functions so they can be
+ *  tested without a router or a DOM — see tests/route-guards.test.mjs. */
+function useGuardState(): GuardState {
+  const { session, isSuperAdmin, loading, isPasswordRecovery } = useAuth()
+  return { loading, hasSession: Boolean(session), isSuperAdmin, isPasswordRecovery }
+}
+
 export function RequireAuth() {
-  const { session, loading, isPasswordRecovery } = useAuth()
+  const outcome = decideRequireAuth(useGuardState())
   const location = useLocation()
 
-  if (loading) return <FullScreenSpinner />
-  // A password-recovery session is only good for setting a new password — don't let it satisfy
-  // "signed in" and drop the user straight into the dashboard before they've done that.
-  if (isPasswordRecovery) return <Navigate to="/reset-password" replace />
-  if (!session) return <Navigate to="/login" replace state={{ from: location }} />
+  if (outcome.kind === 'spinner') return <FullScreenSpinner />
+  if (outcome.kind === 'redirect') {
+    // Only the sign-in bounce carries the return path; the others are terminal destinations.
+    return outcome.to === '/login' ? (
+      <Navigate to={outcome.to} replace state={{ from: location }} />
+    ) : (
+      <Navigate to={outcome.to} replace />
+    )
+  }
   return <Outlet />
 }
 
 export function RequireSuperAdmin() {
-  const { session, isSuperAdmin, loading, isPasswordRecovery } = useAuth()
+  const outcome = decideRequireSuperAdmin(useGuardState())
 
-  if (loading) return <FullScreenSpinner />
-  if (isPasswordRecovery) return <Navigate to="/reset-password" replace />
-  if (!session) return <Navigate to="/login" replace />
-  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />
+  if (outcome.kind === 'spinner') return <FullScreenSpinner />
+  if (outcome.kind === 'redirect') return <Navigate to={outcome.to} replace />
   return <Outlet />
 }
 
 export function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
-  const { session, loading, isPasswordRecovery } = useAuth()
-  if (loading) return <FullScreenSpinner />
-  // Same reasoning as RequireAuth: a recovery session hitting /login or /signup should be routed
-  // to set a new password, not bounced onward as if it were a normal authenticated visit.
-  if (isPasswordRecovery) return <Navigate to="/reset-password" replace />
-  if (session) return <Navigate to="/dashboard" replace />
+  const outcome = decideRedirectIfAuthed(useGuardState())
+
+  if (outcome.kind === 'spinner') return <FullScreenSpinner />
+  if (outcome.kind === 'redirect') return <Navigate to={outcome.to} replace />
   return <>{children}</>
 }
