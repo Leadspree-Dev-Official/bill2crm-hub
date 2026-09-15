@@ -4,6 +4,8 @@
 
 alter table public.subscription_plans add column if not exists periodic_limit integer;
 
+drop function if exists public.admin_upsert_subscription_plan(text, text, text, integer, integer, integer, integer, integer, jsonb, boolean, integer, text);
+
 create or replace function public.admin_upsert_subscription_plan(
   p_id text,
   p_name text,
