@@ -34,7 +34,7 @@ export function BrandLock({
       <span className="font-display text-[15px] font-semibold tracking-tight">
         Bill2CRM
         {suffix ? (
-          <span className="ml-1.5 font-mono text-[11px] font-normal tracking-normal text-muted-foreground">
+          <span className="ml-1.5 font-mono text-[11px] font-normal tracking-normal text-current opacity-60">
             {suffix}
           </span>
         ) : null}

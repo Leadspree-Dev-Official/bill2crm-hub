@@ -21,6 +21,11 @@ export const supabase = createClient(supabaseUrl || 'https://placeholder.supabas
 
 export const ROOT_DOMAIN = import.meta.env.VITE_ROOT_DOMAIN || 'bill2crm.in'
 
+/** Legacy wildcard-subdomain address for a tenant — only correct on a deployment that really
+ *  does give every tenant its own host under ROOT_DOMAIN. The live fleet does not: each server
+ *  serves ALL its tenants from one host (https://bill2crm.leadspree.in), stored per target as
+ *  app_targets.app_base_url and read back through tenant_app_base_url(). Prefer
+ *  `useAuth().appBaseUrl`; this is the fallback for a target with no address recorded yet. */
 export function tenantAppUrl(subdomainSlug: string) {
   return `https://${subdomainSlug}.${ROOT_DOMAIN}`
 }

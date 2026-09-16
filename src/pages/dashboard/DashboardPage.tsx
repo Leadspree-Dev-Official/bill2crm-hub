@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/lib/auth-context'
-import { supabase, tenantAppUrl } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { requestAppLaunchUrl } from '@/lib/api/launch-app'
 import type { SubscriptionPlan } from '@/types/database'
-import { DashboardShell } from '@/components/dashboard-shell'
+import { AppShell } from '@/components/app-shell'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -17,7 +17,7 @@ import type { LucideIcon } from 'lucide-react'
 const BILLING_CYCLE_LABEL: Record<string, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' }
 
 export default function DashboardPage() {
-  const { tenant, subscription, loading } = useAuth()
+  const { tenant, subscription, appBaseUrl, loading } = useAuth()
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null)
   const [launching, setLaunching] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -51,8 +51,8 @@ export default function DashboardPage() {
   }
 
   async function handleCopyLink() {
-    if (!tenant) return
-    await navigator.clipboard.writeText(tenantAppUrl(tenant.subdomain_slug))
+    if (!appBaseUrl) return
+    await navigator.clipboard.writeText(appBaseUrl)
     setCopied(true)
     toast.success('Instance link copied')
     setTimeout(() => setCopied(false), 1500)
@@ -64,8 +64,8 @@ export default function DashboardPage() {
     setCopyingLaunch(false)
 
     if (error || !url) {
-      if (tenant) {
-        await navigator.clipboard.writeText(tenantAppUrl(tenant.subdomain_slug))
+      if (appBaseUrl) {
+        await navigator.clipboard.writeText(appBaseUrl)
         setCopiedLaunch(true)
         toast.success('Instance link copied', {
           description: 'Workspace address copied to clipboard.',
@@ -123,10 +123,10 @@ export default function DashboardPage() {
       ? formatInr(plan?.price_yearly_inr)
       : formatInr(plan?.price_monthly_inr)
   const priceSuffix = subscription?.is_lifetime ? 'one-time' : subscription?.billing_cycle === 'yearly' ? '/year' : '/month'
-  const instanceUrl = tenantAppUrl(tenant.subdomain_slug)
+  const instanceUrl = appBaseUrl
 
   return (
-    <DashboardShell>
+    <AppShell>
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0">
@@ -136,9 +136,9 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <code className="rounded-sm border border-border bg-surface-muted px-2.5 py-1.5 font-mono text-[12px] text-muted-foreground">
-                {instanceUrl}
+                {instanceUrl ?? 'Resolving your app address…'}
               </code>
-              <Button variant="ghost" size="sm" onClick={handleCopyLink} className="h-8">
+              <Button variant="ghost" size="sm" onClick={handleCopyLink} disabled={!instanceUrl} className="h-8">
                 {copied ? <Check className="size-3.5 text-accent" /> : <Copy className="size-3.5" />}
                 {copied ? 'Copied' : 'Copy'}
               </Button>
@@ -255,7 +255,7 @@ export default function DashboardPage() {
           </p>
         </section>
       </div>
-    </DashboardShell>
+    </AppShell>
   )
 }
 

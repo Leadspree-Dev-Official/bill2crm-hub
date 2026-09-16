@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase, tenantAppUrl } from '@/lib/supabase'
 import type { Tenant, TenantSubscription } from '@/types/database'
 
 interface AuthContextValue {
@@ -8,6 +8,11 @@ interface AuthContextValue {
   user: User | null
   tenant: Tenant | null
   subscription: TenantSubscription | null
+  /** Browser-facing address of the Web App server this tenant is assigned to, e.g.
+   *  https://bill2crm.leadspree.in. Read from the tenant's own app_target rather than derived
+   *  from the slug: one server hosts many tenants on a single host, so there is no rule that
+   *  turns a slug into an address. Null until the tenant row has loaded. */
+  appBaseUrl: string | null
   isSuperAdmin: boolean
   loading: boolean
   /** True from the moment Supabase fires a PASSWORD_RECOVERY auth event (a user landed here via
@@ -56,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [tenant, setTenant] = useState<Tenant | null>(null)
   const [subscription, setSubscription] = useState<TenantSubscription | null>(null)
+  const [appBaseUrl, setAppBaseUrl] = useState<string | null>(null)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false)
@@ -64,17 +70,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!currentUser) {
       setTenant(null)
       setSubscription(null)
+      setAppBaseUrl(null)
       setIsSuperAdmin(false)
       return
     }
 
-    const [tenantResult, adminResult] = await Promise.all([
+    const [tenantResult, adminResult, appUrlResult] = await Promise.all([
       supabase
         .from('tenants')
         .select('*, tenant_subscriptions(*)')
         .eq('owner_user_id', currentUser.id)
         .maybeSingle(),
       supabase.from('super_admins').select('user_id').eq('user_id', currentUser.id).maybeSingle(),
+      // Scalar rather than a join on app_targets: that table is super-admin-only under RLS and
+      // carries the fleet's tier/capacity topology, which a tenant has no business reading.
+      supabase.rpc('tenant_app_base_url'),
     ])
 
     if (tenantResult.data) {
@@ -83,9 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setTenant(tenantRow)
       setSubscription(Array.isArray(tenant_subscriptions) ? (tenant_subscriptions[0] ?? null) : tenant_subscriptions)
+      // No address recorded for this tenant's server yet — fall back to the old
+      // <slug>.<ROOT_DOMAIN> derivation so the dashboard still shows something.
+      const resolved = typeof appUrlResult.data === 'string' ? appUrlResult.data.replace(/\/+$/, '') : ''
+      setAppBaseUrl(resolved || tenantAppUrl(tenantRow.subdomain_slug))
     } else {
       setTenant(null)
       setSubscription(null)
+      setAppBaseUrl(null)
     }
 
     setIsSuperAdmin(Boolean(adminResult.data))
@@ -176,6 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user: session?.user ?? null,
       tenant,
       subscription,
+      appBaseUrl,
       isSuperAdmin,
       loading,
       isPasswordRecovery,
@@ -184,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
     }),
-    [session, tenant, subscription, isSuperAdmin, loading, isPasswordRecovery, refresh, signUp, signIn, signOut],
+    [session, tenant, subscription, appBaseUrl, isSuperAdmin, loading, isPasswordRecovery, refresh, signUp, signIn, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

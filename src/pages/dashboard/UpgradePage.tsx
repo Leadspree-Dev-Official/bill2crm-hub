@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CreditCard, Lock, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import { DashboardShell } from '@/components/dashboard-shell'
+import { AppShell } from '@/components/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -131,7 +131,7 @@ export default function UpgradePage() {
   }
 
   return (
-    <DashboardShell>
+    <AppShell>
       <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-3.5" />
         Back to workspace
@@ -288,6 +288,6 @@ export default function UpgradePage() {
           </section>
         </aside>
       </div>
-    </DashboardShell>
+    </AppShell>
   )
 }

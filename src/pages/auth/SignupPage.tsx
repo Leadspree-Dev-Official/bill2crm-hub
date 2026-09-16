@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useAuth } from '@/lib/auth-context'
-import { ROOT_DOMAIN } from '@/lib/supabase'
 import { AuthLayout } from '@/components/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -106,8 +105,13 @@ export default function SignupPage() {
                   <FormControl>
                     <Input placeholder="e.g. Sharma Traders" autoComplete="organization" {...field} />
                   </FormControl>
+                  {/* Names the workspace, not a hostname. Which server a tenant lands on is
+                      decided at signup by free capacity, and each server hosts all of its
+                      tenants on one address — so there is no per-tenant URL to promise here,
+                      and the old `{slug}.{ROOT_DOMAIN}` preview pointed at a host that does
+                      not resolve. The real address is shown on the dashboard once assigned. */}
                   {subdomain ? (
-                    <p className="font-mono text-[11px] text-muted-foreground">Instance: {subdomain}.{ROOT_DOMAIN}</p>
+                    <p className="font-mono text-[11px] text-muted-foreground">Workspace ID: {subdomain}</p>
                   ) : null}
                   <FormMessage />
                 </FormItem>

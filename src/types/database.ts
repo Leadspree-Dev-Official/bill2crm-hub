@@ -37,6 +37,11 @@ export interface AppTarget {
   id: string
   label: string
   supabase_url: string
+  /** Browser-facing address of this server's Web App frontend, e.g.
+   *  https://bill2crm.leadspree.in — where "Launch my app" actually sends a tenant. Distinct
+   *  from supabase_url, which is the API origin. Null falls back to the legacy
+   *  <slug>.<ROOT_DOMAIN> derivation. */
+  app_base_url: string | null
   is_default: boolean
   tier: AppTargetTier
   /** Explicit seat ceiling. Null means "use the tier default". Always set for `hosted`. */
@@ -50,6 +55,7 @@ export interface AppTargetOccupancy {
   target_id: string
   label: string
   supabase_url: string
+  app_base_url: string | null
   tier: AppTargetTier
   is_default: boolean
   capacity_seats: number

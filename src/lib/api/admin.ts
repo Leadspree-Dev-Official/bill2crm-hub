@@ -145,6 +145,7 @@ export async function revokeSuperAdmin(userId: string) {
 export async function createAppTarget(input: {
   label: string
   supabaseUrl: string
+  appBaseUrl: string | null
   serviceRoleKey: string
   isDefault: boolean
   tier: AppTargetTier
@@ -157,17 +158,19 @@ export async function createAppTarget(input: {
     p_is_default: input.isDefault,
     p_tier: input.tier,
     p_capacity_seats_override: input.capacitySeatsOverride,
+    p_app_base_url: input.appBaseUrl,
   })
   return { id: data as string | null, error: error?.message ?? null }
 }
 
 /** Pass serviceRoleKey only to rotate it — omit/blank to leave the stored key untouched.
- *  capacitySeatsOverride is always applied as given, so passing null on a free/pro server
- *  resets it back to that tier's default. */
+ *  capacitySeatsOverride and appBaseUrl are always applied as given, so passing null resets
+ *  them (to the tier default, and to the <slug>.<ROOT_DOMAIN> derivation, respectively). */
 export async function updateAppTarget(input: {
   targetId: string
   label: string
   supabaseUrl: string
+  appBaseUrl: string | null
   serviceRoleKey?: string
   tier: AppTargetTier
   capacitySeatsOverride: number | null
@@ -179,6 +182,7 @@ export async function updateAppTarget(input: {
     p_service_role_key: input.serviceRoleKey || null,
     p_tier: input.tier,
     p_capacity_seats_override: input.capacitySeatsOverride,
+    p_app_base_url: input.appBaseUrl,
   })
   return { error: error?.message ?? null }
 }

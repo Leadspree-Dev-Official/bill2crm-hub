@@ -38,6 +38,9 @@ const emptyForm = {
   id: '',
   label: '',
   supabaseUrl: '',
+  /** Where a browser reaches this server's Web App. Blank falls back to the legacy
+   *  <slug>.<ROOT_DOMAIN> derivation, which is wrong for every one-host-per-server deployment. */
+  appBaseUrl: '',
   serviceRoleKey: '',
   isDefault: false,
   tier: 'free' as AppTargetTier,
@@ -94,6 +97,7 @@ export default function AppLinksPage() {
       id: target.target_id,
       label: target.label,
       supabaseUrl: target.supabase_url,
+      appBaseUrl: target.app_base_url ?? '',
       serviceRoleKey: '',
       isDefault: target.is_default,
       tier: target.tier,
@@ -109,6 +113,12 @@ export default function AppLinksPage() {
     }
     if (!form.id && !form.serviceRoleKey.trim()) {
       toast.error('Service role key is required')
+      return
+    }
+
+    const appBaseUrl = form.appBaseUrl.trim().replace(/\/+$/, '')
+    if (appBaseUrl && !/^https:\/\/[^/\s]+(\/\S*)?$/.test(appBaseUrl)) {
+      toast.error('App URL must be a full https:// address', { description: 'For example https://bill2crm.leadspree.in' })
       return
     }
 
@@ -135,6 +145,7 @@ export default function AppLinksPage() {
           targetId: form.id,
           label: form.label.trim(),
           supabaseUrl: form.supabaseUrl.trim(),
+          appBaseUrl: appBaseUrl || null,
           serviceRoleKey: form.serviceRoleKey.trim(),
           tier: form.tier,
           capacitySeatsOverride,
@@ -142,6 +153,7 @@ export default function AppLinksPage() {
       : await createAppTarget({
           label: form.label.trim(),
           supabaseUrl: form.supabaseUrl.trim(),
+          appBaseUrl: appBaseUrl || null,
           serviceRoleKey: form.serviceRoleKey.trim(),
           isDefault: form.isDefault,
           tier: form.tier,
@@ -247,12 +259,29 @@ export default function AppLinksPage() {
                     <Input placeholder="Shared cloud" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Supabase URL</Label>
+                    <Label>
+                      Supabase URL <span className="font-normal text-muted-foreground">(API origin)</span>
+                    </Label>
                     <Input
                       placeholder="https://xxxxxxxxxxxx.supabase.co"
                       value={form.supabaseUrl}
                       onChange={(e) => setForm({ ...form, supabaseUrl: e.target.value })}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      App URL <span className="font-normal text-muted-foreground">(where users land)</span>
+                    </Label>
+                    <Input
+                      placeholder="https://bill2crm.leadspree.in"
+                      value={form.appBaseUrl}
+                      onChange={(e) => setForm({ ...form, appBaseUrl: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The address "Launch my app" opens. Add it to this server's Supabase{' '}
+                      <span className="font-medium text-foreground">Authentication → URL Configuration</span> redirect
+                      allow-list too, or the magic link will bounce to its Site URL.
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>
@@ -341,6 +370,7 @@ export default function AppLinksPage() {
               <TableRow className="hover:bg-transparent">
                 <TableHead>Label</TableHead>
                 <TableHead>Supabase URL</TableHead>
+                <TableHead>App URL</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>Capacity</TableHead>
                 <TableHead>Tenants</TableHead>
@@ -358,6 +388,22 @@ export default function AppLinksPage() {
                   <TableRow key={target.target_id}>
                     <TableCell className="font-medium">{target.label}</TableCell>
                     <TableCell className="font-mono text-[11px] text-muted-foreground">{target.supabase_url}</TableCell>
+                    <TableCell className="font-mono text-[11px]">
+                      {target.app_base_url ? (
+                        <a
+                          href={target.app_base_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground underline-offset-2 hover:underline"
+                        >
+                          {target.app_base_url}
+                        </a>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400" title="Falls back to <slug>.bill2crm.in, which only works on a wildcard-subdomain deployment">
+                          not set
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="font-normal">
                         {APP_TARGET_TIER_LABELS[target.tier]}
@@ -468,7 +514,7 @@ export default function AppLinksPage() {
               })}
               {targets.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                     No app links yet — add one to enable "Launch my app" for new signups.
                   </TableCell>
                 </TableRow>

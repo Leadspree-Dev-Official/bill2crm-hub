@@ -24,8 +24,22 @@ export async function resolveAppTarget(own: SupabaseClient, tenantId?: string) {
   if (error || !data) {
     throw error ?? new Error('No app link is configured yet — add one in /admin -> App links')
   }
-  const row = data as { target_id: string; supabase_url: string; service_role_key: string }
-  return { url: row.supabase_url, serviceRoleKey: row.service_role_key, targetId: row.target_id }
+  const row = data as {
+    target_id: string
+    supabase_url: string
+    app_base_url: string | null
+    service_role_key: string
+  }
+  // appBaseUrl is where a BROWSER reaches this server's Web App; url is its API origin. They
+  // are different hosts and only the first one is ever a redirect target. Null means the
+  // target predates 20260916100000_app_target_app_url.sql and has no address stored yet —
+  // callers fall back to the old <slug>.<ROOT_DOMAIN> derivation.
+  return {
+    url: row.supabase_url,
+    appBaseUrl: row.app_base_url,
+    serviceRoleKey: row.service_role_key,
+    targetId: row.target_id,
+  }
 }
 
 export async function resolveAppTargetById(own: SupabaseClient, targetId: string) {
