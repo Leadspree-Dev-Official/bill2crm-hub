@@ -12,7 +12,7 @@ values
    false, 0),
 
   ('plan_free', 'Free', 'Free forever, limited usage', 0, 0, null,
-   1, 100,
+   1, 10,
    '{"crm": true, "automated_reminders": false, "doc_vault_limit": 0, "priority_support": false, "invoices_per_month": 10}'::jsonb,
    true, 1),
 
