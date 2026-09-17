@@ -15,9 +15,9 @@ export function Hero() {
         </span>
         <h1 className="mt-6 text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
           <span className="block" style={{ color: '#FF9933' }}>
-            6 apps. 6 headaches.
+            6 Apps. 6 Subscriptions.
           </span>
-          <span className="block text-foreground">You deserve one.</span>
+          <span className="block text-foreground">You Deserve One.</span>
           <span className="block" style={{ color: '#138808' }}>
             Meet Bill2CRM.
           </span>
