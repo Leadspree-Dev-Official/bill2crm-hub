@@ -28,6 +28,7 @@ const STATUSES: TenantStatus[] = ['trial', 'active', 'free', 'past_due', 'suspen
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<TenantWithDetails[]>([])
+  const [defaultTarget, setDefaultTarget] = useState<{ id: string; label: string; app_base_url: string | null } | null>(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | TenantStatus>('all')
@@ -40,16 +41,27 @@ export default function TenantsPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('*, tenant_subscriptions(*), app_target:app_targets(id, label)')
-      .order('created_at', { ascending: false })
+    const [tenantsResult, defaultTargetResult] = await Promise.all([
+      supabase
+        .from('tenants')
+        .select('*, tenant_subscriptions(*), app_target:app_targets(id, label, app_base_url)')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('app_targets')
+        .select('id, label, app_base_url')
+        .eq('is_default', true)
+        .maybeSingle(),
+    ])
 
-    if (error) {
-      toast.error('Could not load tenants', { description: error.message })
+    if (defaultTargetResult.data) {
+      setDefaultTarget(defaultTargetResult.data)
+    }
+
+    if (tenantsResult.error) {
+      toast.error('Could not load tenants', { description: tenantsResult.error.message })
     } else {
       setTenants(
-        (data ?? []).map((row) => ({
+        (tenantsResult.data ?? []).map((row) => ({
           ...row,
           tenant_subscriptions: Array.isArray(row.tenant_subscriptions)
             ? (row.tenant_subscriptions[0] ?? null)
@@ -62,6 +74,10 @@ export default function TenantsPage() {
 
   useEffect(() => {
     void load()
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', load)
+      return () => window.removeEventListener('focus', load)
+    }
   }, [load])
 
   async function handlePurge(tenant: TenantWithDetails) {
@@ -150,6 +166,16 @@ export default function TenantsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void load()}
+              disabled={loading}
+              className="h-8 px-2.5 text-[13px]"
+            >
+              <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="ml-1.5 hidden sm:inline">Refresh</span>
+            </Button>
           </div>
         }
       />
@@ -215,8 +241,38 @@ export default function TenantsPage() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground">
                     {tenant.tenant_subscriptions?.plan_id ?? '—'}
                   </TableCell>
-                  <TableCell className="font-mono text-[11px] text-muted-foreground">
-                    {tenant.app_target?.label ?? 'Default'}
+                  <TableCell>
+                    {tenant.app_target ? (
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                          <span>{tenant.app_target.label}</span>
+                          <span className="rounded bg-primary/10 px-1 py-0.2 text-[10px] font-semibold text-primary">
+                            Assigned
+                          </span>
+                        </div>
+                        {tenant.app_target.app_base_url ? (
+                          <p className="font-mono text-[11px] text-muted-foreground">
+                            {tenant.app_target.app_base_url.replace(/^https?:\/\//, '')}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className="font-medium">Default</span>
+                          {defaultTarget ? (
+                            <span className="text-[11px] text-muted-foreground">
+                              ({defaultTarget.label})
+                            </span>
+                          ) : null}
+                        </div>
+                        {defaultTarget?.app_base_url ? (
+                          <p className="font-mono text-[11px] text-muted-foreground/80">
+                            {defaultTarget.app_base_url.replace(/^https?:\/\//, '')}
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="font-mono text-[11px] text-muted-foreground">
                     {new Date(tenant.created_at).toLocaleDateString('en-IN')}

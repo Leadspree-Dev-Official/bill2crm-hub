@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { triggerAuthRefresh, useAuth } from '@/lib/auth-context'
 import {
   createAppTarget,
   deleteAppTarget,
@@ -60,6 +61,7 @@ const TIER_HINT: Record<AppTargetTier, string> = {
 }
 
 export default function AppLinksPage() {
+  const { refresh } = useAuth()
   const [targets, setTargets] = useState<AppTargetRow[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -170,6 +172,8 @@ export default function AppLinksPage() {
     }
     toast.success('App link saved')
     setOpen(false)
+    triggerAuthRefresh()
+    void refresh()
     void load()
   }
 
@@ -206,6 +210,8 @@ export default function AppLinksPage() {
       return
     }
     toast.success(`${target.label} is now the default for new signups`)
+    triggerAuthRefresh()
+    void refresh()
     void load()
   }
 
@@ -216,6 +222,8 @@ export default function AppLinksPage() {
       return
     }
     toast.success(`${target.label} deleted`)
+    triggerAuthRefresh()
+    void refresh()
     void load()
   }
 
@@ -298,7 +306,7 @@ export default function AppLinksPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>Tier</Label>
+                      <Label>Supabase Tier</Label>
                       <Select
                         value={form.tier}
                         onValueChange={(v) => setForm({ ...form, tier: v as AppTargetTier })}
@@ -371,7 +379,7 @@ export default function AppLinksPage() {
                 <TableHead>Label</TableHead>
                 <TableHead>Supabase URL</TableHead>
                 <TableHead>App URL</TableHead>
-                <TableHead>Tier</TableHead>
+                <TableHead>Supabase Tier</TableHead>
                 <TableHead>Capacity</TableHead>
                 <TableHead>Tenants</TableHead>
                 <TableHead>Health</TableHead>

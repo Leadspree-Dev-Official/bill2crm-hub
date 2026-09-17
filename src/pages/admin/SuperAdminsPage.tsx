@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/lib/auth-context'
+import { triggerAuthRefresh, useAuth } from '@/lib/auth-context'
 import { findUserByEmail, grantSuperAdmin, revokeSuperAdmin } from '@/lib/api/admin'
 import type { SuperAdmin } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import { Loader2, UserMinus, UserPlus } from 'lucide-react'
 
 export default function SuperAdminsPage() {
-  const { user } = useAuth()
+  const { user, refresh } = useAuth()
   const [admins, setAdmins] = useState<SuperAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -46,6 +46,8 @@ export default function SuperAdminsPage() {
     }
     toast.success(`${email} is now a super admin`)
     setEmail('')
+    triggerAuthRefresh()
+    void refresh()
     void load()
   }
 
@@ -56,6 +58,8 @@ export default function SuperAdminsPage() {
       return
     }
     toast.success('Access revoked')
+    triggerAuthRefresh()
+    void refresh()
     void load()
   }
 

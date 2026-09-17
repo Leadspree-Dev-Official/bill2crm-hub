@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useAuth } from '@/lib/auth-context'
+import { triggerAuthRefresh, triggerUpgradeRequestsChanged, useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 import { buildWhatsAppOrderLink, isWhatsAppConfigured } from '@/lib/whatsapp'
 import { formatInr } from '@/lib/plan-utils'
@@ -126,6 +126,8 @@ export default function UpgradePage() {
         description: 'Our team will reach out to you by email shortly to arrange payment and activate your plan.',
       })
     }
+    triggerUpgradeRequestsChanged()
+    triggerAuthRefresh()
     void refresh()
     navigate('/dashboard')
   }

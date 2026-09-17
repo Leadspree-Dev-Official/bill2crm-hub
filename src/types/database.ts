@@ -128,9 +128,9 @@ export interface TenantWithSubscription extends Tenant {
   tenant_subscriptions: TenantSubscription | null
 }
 
-/** Adds the assigned app link's label, for the /admin → Tenants list. */
+/** Adds the assigned app link's label and URL, for the /admin → Tenants list. */
 export interface TenantWithDetails extends TenantWithSubscription {
-  app_target: Pick<AppTarget, 'id' | 'label'> | null
+  app_target: Pick<AppTarget, 'id' | 'label' | 'app_base_url'> | null
 }
 
 /** Joined view used by the admin "Upgrade requests" queue. */

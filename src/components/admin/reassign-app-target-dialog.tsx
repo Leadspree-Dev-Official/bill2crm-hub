@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { reassignTenantAppTarget } from '@/lib/api/admin'
+import { triggerAuthRefresh, useAuth } from '@/lib/auth-context'
 import type { AppTarget, TenantWithDetails } from '@/types/database'
 import {
   Dialog,
@@ -29,6 +30,7 @@ export function ReassignAppTargetDialog({
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) {
+  const { refresh } = useAuth()
   const [targets, setTargets] = useState<AppTarget[]>([])
   const [targetId, setTargetId] = useState<string>(USE_DEFAULT)
   const [saving, setSaving] = useState(false)
@@ -58,8 +60,12 @@ export function ReassignAppTargetDialog({
     }
     toast.success('App link updated')
     onOpenChange(false)
+    triggerAuthRefresh()
+    void refresh()
     onSaved()
   }
+
+  const defaultTarget = targets.find((t) => t.is_default)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -67,7 +73,7 @@ export function ReassignAppTargetDialog({
         <DialogHeader>
           <DialogTitle>Reassign {tenant?.business_name}</DialogTitle>
           <DialogDescription>
-            Which Web App deployment this tenant's "Launch my app" and entitlement sync point at.
+            Which Web App deployment this tenant&apos;s &quot;Launch my app&quot; and entitlement sync point at.
             Use this for a dedicated, private cloud instance — everyone else stays on the default.
           </DialogDescription>
         </DialogHeader>
@@ -78,11 +84,17 @@ export function ReassignAppTargetDialog({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={USE_DEFAULT}>Use whatever is default</SelectItem>
+              <SelectItem value={USE_DEFAULT}>
+                Use whatever is default
+                {defaultTarget
+                  ? ` (${defaultTarget.label}${defaultTarget.app_base_url ? ` · ${defaultTarget.app_base_url}` : ''})`
+                  : ''}
+              </SelectItem>
               {targets.map((target) => (
                 <SelectItem key={target.id} value={target.id}>
                   {target.label}
-                  {target.is_default ? ' (default)' : ''}
+                  {target.app_base_url ? ` (${target.app_base_url})` : ''}
+                  {target.is_default ? ' [default]' : ''}
                 </SelectItem>
               ))}
             </SelectContent>

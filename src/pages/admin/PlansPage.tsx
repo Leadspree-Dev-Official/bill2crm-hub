@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { triggerAuthRefresh, useAuth } from '@/lib/auth-context'
 import { upsertSubscriptionPlan } from '@/lib/api/admin'
 import type { SubscriptionPlan } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ const emptyPlan = {
 type PlanFormState = typeof emptyPlan
 
 export default function PlansPage() {
+  const { refresh } = useAuth()
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -122,6 +124,8 @@ export default function PlansPage() {
     if (error?.startsWith('Plan saved, but')) {
       toast.warning('Plan saved locally', { description: error })
       setOpen(false)
+      triggerAuthRefresh()
+      void refresh()
       void load()
       return
     }
@@ -131,6 +135,8 @@ export default function PlansPage() {
     }
     toast.success('Plan saved')
     setOpen(false)
+    triggerAuthRefresh()
+    void refresh()
     void load()
   }
 

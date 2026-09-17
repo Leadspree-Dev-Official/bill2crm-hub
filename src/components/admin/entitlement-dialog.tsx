@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { setTenantEntitlement } from '@/lib/api/admin'
+import { triggerAuthRefresh, useAuth } from '@/lib/auth-context'
 import type { SubscriptionPlan, TenantStatus, TenantWithSubscription } from '@/types/database'
 import {
   Dialog,
@@ -35,6 +36,7 @@ export function EntitlementDialog({
    *  from an upgrade request, where the customer already told us which plan they want. */
   defaultPlanId?: string | null
 }) {
+  const { refresh } = useAuth()
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [planId, setPlanId] = useState('')
   const [status, setStatus] = useState<TenantStatus>('trial')
@@ -85,6 +87,8 @@ export function EntitlementDialog({
     }
     toast.success('Entitlement updated')
     onOpenChange(false)
+    triggerAuthRefresh()
+    void refresh()
     onSaved()
   }
 

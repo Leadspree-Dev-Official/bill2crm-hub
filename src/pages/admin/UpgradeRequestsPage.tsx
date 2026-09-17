@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { resolveUpgradeRequest } from '@/lib/api/admin'
+import { triggerAuthRefresh, triggerUpgradeRequestsChanged } from '@/lib/auth-context'
 import type { UpgradeRequestWithDetails } from '@/types/database'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -58,6 +59,8 @@ export default function UpgradeRequestsPage() {
       return
     }
     toast.success('Request dismissed')
+    triggerUpgradeRequestsChanged()
+    triggerAuthRefresh()
     void load()
   }
 
@@ -70,6 +73,8 @@ export default function UpgradeRequestsPage() {
       toast.success('Access granted')
     }
     setGranting(null)
+    triggerUpgradeRequestsChanged()
+    triggerAuthRefresh()
     void load()
   }
 

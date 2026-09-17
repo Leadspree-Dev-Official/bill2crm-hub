@@ -57,6 +57,23 @@ export function writeRecoveryFlag(on: boolean) {
   }
 }
 
+export const AUTH_REFRESH_EVENT = 'bill2crm:auth_refresh'
+export const UPGRADE_REQUESTS_EVENT = 'bill2crm:upgrade_requests_changed'
+
+/** Dispatches a cross-component signal to reload the active user's tenant, subscription, and appBaseUrl. */
+export function triggerAuthRefresh() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(AUTH_REFRESH_EVENT))
+  }
+}
+
+/** Dispatches a signal to update the admin sidebar pending upgrade requests badge immediately. */
+export function triggerUpgradeRequestsChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(UPGRADE_REQUESTS_EVENT))
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [tenant, setTenant] = useState<Tenant | null>(null)
@@ -156,11 +173,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await loadProfile(currentSession?.user ?? null)
     })
 
+    const handleRefreshEvent = () => {
+      if (!active) return
+      void refresh()
+    }
+
+    let lastRefreshedAt = Date.now()
+    const handleFocusOrVisibility = () => {
+      if (!active) return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      const now = Date.now()
+      if (now - lastRefreshedAt < 10_000) return
+      lastRefreshedAt = now
+      void refresh()
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(AUTH_REFRESH_EVENT, handleRefreshEvent)
+      window.addEventListener('focus', handleFocusOrVisibility)
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', handleFocusOrVisibility)
+      }
+    }
+
     return () => {
       active = false
       subscriptionHandle.subscription.unsubscribe()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(AUTH_REFRESH_EVENT, handleRefreshEvent)
+        window.removeEventListener('focus', handleFocusOrVisibility)
+        if (typeof document !== 'undefined') {
+          document.removeEventListener('visibilitychange', handleFocusOrVisibility)
+        }
+      }
     }
-  }, [loadProfile])
+  }, [loadProfile, refresh])
 
   const signUp = useCallback(async (email: string, password: string, businessName: string) => {
     const { data, error } = await supabase.auth.signUp({

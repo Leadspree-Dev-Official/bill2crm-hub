@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowUpRight,
@@ -35,7 +35,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { useAuth } from '@/lib/auth-context'
+import { UPGRADE_REQUESTS_EVENT, useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 
 type NavItem = {
@@ -68,7 +68,7 @@ const governanceNav: NavItem[] = [
 function usePendingUpgradeRequests(enabled: boolean) {
   const [pending, setPending] = useState(0)
 
-  useEffect(() => {
+  const check = useCallback(() => {
     if (!enabled) return
     supabase
       .from('upgrade_requests')
@@ -76,6 +76,24 @@ function usePendingUpgradeRequests(enabled: boolean) {
       .in('status', ['pending', 'contacted'])
       .then(({ count }) => setPending(count ?? 0))
   }, [enabled])
+
+  useEffect(() => {
+    if (!enabled) {
+      setPending(0)
+      return
+    }
+    check()
+    if (typeof window !== 'undefined') {
+      window.addEventListener(UPGRADE_REQUESTS_EVENT, check)
+      window.addEventListener('focus', check)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(UPGRADE_REQUESTS_EVENT, check)
+        window.removeEventListener('focus', check)
+      }
+    }
+  }, [enabled, check])
 
   // Derived rather than reset in the effect, so losing the grant clears the badge
   // without a second render pass.
