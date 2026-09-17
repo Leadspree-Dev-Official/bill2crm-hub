@@ -17,7 +17,7 @@ import type { LucideIcon } from 'lucide-react'
 const BILLING_CYCLE_LABEL: Record<string, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' }
 
 export default function DashboardPage() {
-  const { tenant, subscription, appBaseUrl, loading } = useAuth()
+  const { tenant, subscription, appBaseUrl, loading, refresh } = useAuth()
   const [plan, setPlan] = useState<SubscriptionPlan | null>(null)
   const [launching, setLaunching] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -27,6 +27,12 @@ export default function DashboardPage() {
   // in the render body is impure and can yield a different trial percentage on
   // each pass under React 19's concurrent rendering.
   const [renderedAt] = useState(() => Date.now())
+
+  // Revalidate profile, subscription, and instance URL on mount so navigation to dashboard
+  // is always completely up-to-date without needing a browser reload.
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
 
   useEffect(() => {
     if (!subscription?.plan_id) return
@@ -48,6 +54,99 @@ export default function DashboardPage() {
     // there would be no handle left to navigate. The reverse-tabnabbing protection it would
     // have given is applied below instead, by severing opener before the URL is set.
     const tab = window.open('about:blank', '_blank')
+    if (tab) {
+      try {
+        tab.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Opening Bill2CRM...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #09090b;
+      color: #fafafa;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .card {
+      text-align: center;
+      padding: 36px 32px;
+      max-width: 420px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+    }
+    .spinner-wrap {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 18px;
+    }
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(255,255,255,0.12);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    h2 { font-size: 18px; font-weight: 600; margin: 0 0 8px; color: #fff; }
+    p { font-size: 13px; color: #a1a1aa; margin: 0 0 16px; line-height: 1.5; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      font-size: 11px;
+      color: #60a5fa;
+      font-family: ui-monospace, monospace;
+    }
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #3b82f6;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+    </div>
+    <h2>Connecting to Workspace</h2>
+    <p>Minting secure single sign-on link and preparing your application session&hellip;</p>
+    <div class="status-badge">
+      <span class="dot"></span>
+      <span>Authenticating session</span>
+    </div>
+  </div>
+</body>
+</html>`)
+        tab.document.close()
+      } catch {
+        /* blocked or cross-origin */
+      }
+    }
+
+    const toastId = toast.loading('Connecting to your workspace…', {
+      description: 'Opening new tab and establishing secure session…',
+    })
 
     setLaunching(true)
     const { url, error } = await requestAppLaunchUrl()
@@ -55,9 +154,18 @@ export default function DashboardPage() {
 
     if (error || !url) {
       tab?.close()
-      toast.error("Couldn't open your app", { description: error ?? 'Please try again in a moment.' })
+      toast.error("Couldn't open your app", {
+        id: toastId,
+        description: error ?? 'Please try again in a moment.',
+      })
       return
     }
+
+    toast.success('Workspace ready!', {
+      id: toastId,
+      description: 'Opening your application…',
+      duration: 3000,
+    })
 
     if (tab) {
       // Sever the back-reference before handing the tab a real origin, so the Web App can
@@ -174,9 +282,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Button size="lg" onClick={handleLaunch} disabled={launching || copyingLaunch} className="shrink-0">
+            <Button size="lg" onClick={handleLaunch} disabled={launching || copyingLaunch} className="shrink-0 gap-2">
               {launching ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
-              Launch my app
+              {launching ? 'Opening workspace…' : 'Launch my app'}
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -203,6 +311,16 @@ export default function DashboardPage() {
             </Tooltip>
           </div>
         </div>
+
+        {launching && (
+          <div className="mt-4 flex items-center gap-2.5 rounded-md border border-primary/25 bg-primary/5 px-3.5 py-2.5 text-xs text-primary animate-in fade-in slide-in-from-top-1 w-full">
+            <Loader2 className="size-4 animate-spin shrink-0 text-primary" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-foreground">Launching workspace in new tab&hellip;</p>
+              <p className="text-muted-foreground text-[11px]">Minting single sign-on link and authenticating session securely.</p>
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_1fr]">
