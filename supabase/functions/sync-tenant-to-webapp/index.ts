@@ -60,11 +60,17 @@ Deno.serve(async (req) => {
     // Ensure a matching identity exists in the Web App project. If the Web App's own signup
     // trigger fires from this insert, it may create a baseline trial org first — the upsert
     // below immediately corrects it to this project's authoritative entitlement.
+    // The password here is deliberately random AND discarded — nobody ever learns it. The
+    // owner is meant to arrive by magic link, not by typing it. But that leaves them the one
+    // account in the workspace with no usable password (their own staff get one chosen for
+    // them in HRMS), so must_set_password marks them for a one-time "choose your password"
+    // prompt on first launch. Without it, any failed link locks the owner out of their own
+    // workspace with nothing to type and no password to reset.
     const { error: createUserError } = await webApp.auth.admin.createUser({
       email,
       password: crypto.randomUUID(),
       email_confirm: true,
-      user_metadata: { workspaceName: tenant.business_name },
+      user_metadata: { workspaceName: tenant.business_name, must_set_password: true },
     })
     if (createUserError && !createUserError.message.toLowerCase().includes('already')) {
       throw createUserError
