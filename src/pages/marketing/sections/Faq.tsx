@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: 'What happens after the 7-day free trial ends?',
-    a: 'You keep using Bill2CRM on a limited Free plan — a smaller invoice and storage allowance instead of losing access — and can upgrade any time you outgrow it.',
+    a: 'You keep using Bill2CRM on a limited Free plan — a smaller invoice allowance instead of losing access — and can upgrade any time you outgrow it.',
   },
   {
     q: 'Is my customer and business data secure?',

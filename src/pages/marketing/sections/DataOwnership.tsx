@@ -15,7 +15,7 @@ const POINTS = [
   {
     icon: ShieldCheck,
     title: 'Encrypted legal vault',
-    desc: 'Contracts, agreements and sensitive documents live in an encrypted vault with plan-based storage limits.',
+    desc: 'Contracts, agreements and sensitive documents live in an encrypted vault with dedicated cloud protection.',
   },
 ]
 

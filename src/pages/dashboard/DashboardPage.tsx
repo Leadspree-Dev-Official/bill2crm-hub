@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { daysRemaining, formatInr, formatLimit } from '@/lib/plan-utils'
-import { ArrowUpRight, Check, Copy, HardDrive, Loader2, Rocket, Users } from 'lucide-react'
+import { ArrowUpRight, Check, Copy, Loader2, Rocket, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import type { LucideIcon } from 'lucide-react'
 
@@ -387,11 +387,6 @@ export default function DashboardPage() {
               icon={Users}
               label="Users"
               value={formatLimit(subscription?.user_limit_override ?? plan?.user_limit ?? null)}
-            />
-            <UsageStat
-              icon={HardDrive}
-              label="Storage"
-              value={formatLimit(subscription?.storage_limit_override_mb ?? plan?.storage_limit_mb ?? null, ' MB')}
             />
           </div>
 

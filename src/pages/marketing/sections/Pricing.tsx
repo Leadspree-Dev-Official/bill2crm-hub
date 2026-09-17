@@ -122,10 +122,6 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
           <Check className="size-4 shrink-0 text-accent" />
           {formatLimit(plan.user_limit)} user{plan.user_limit === 1 ? '' : 's'}
         </li>
-        <li className="flex items-center gap-2">
-          <Check className="size-4 shrink-0 text-accent" />
-          {formatLimit(plan.storage_limit_mb, ' MB')} storage
-        </li>
         {Boolean(plan.feature_flags?.automated_reminders) && (
           <li className="flex items-center gap-2">
             <Check className="size-4 shrink-0 text-accent" /> Automated reminders
@@ -146,7 +142,6 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
 
 const FEATURE_ROWS: { key: string; label: string; render: (plan: SubscriptionPlan) => ReactNode }[] = [
   { key: 'users', label: 'Users', render: (p) => formatLimit(p.user_limit) },
-  { key: 'storage', label: 'Storage', render: (p) => formatLimit(p.storage_limit_mb, ' MB') },
   { key: 'crm', label: 'Built-in mini CRM', render: (p) => <FlagCell value={p.feature_flags?.crm} /> },
   {
     key: 'automated_reminders',

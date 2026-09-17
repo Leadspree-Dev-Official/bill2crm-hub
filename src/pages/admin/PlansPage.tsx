@@ -30,7 +30,6 @@ const emptyPlan = {
   price_yearly_inr: '',
   price_lifetime_inr: '',
   user_limit: '',
-  storage_limit_mb: '',
   periodic_limit: '',
   vault_file_limit: '',
   is_active: true,
@@ -76,7 +75,6 @@ export default function PlansPage() {
             price_yearly_inr: plan.price_yearly_inr?.toString() ?? '',
             price_lifetime_inr: plan.price_lifetime_inr?.toString() ?? '',
             user_limit: plan.user_limit?.toString() ?? '',
-            storage_limit_mb: plan.storage_limit_mb?.toString() ?? '',
             periodic_limit: plan.periodic_limit?.toString() ?? '',
             vault_file_limit: typeof flags.vaultFileLimit === 'number' ? flags.vaultFileLimit.toString() : '',
             is_active: plan.is_active,
@@ -106,7 +104,7 @@ export default function PlansPage() {
       priceYearlyInr: form.price_yearly_inr ? Number(form.price_yearly_inr) : null,
       priceLifetimeInr: form.price_lifetime_inr ? Number(form.price_lifetime_inr) : null,
       userLimit: form.user_limit ? Number(form.user_limit) : null,
-      storageLimitMb: form.storage_limit_mb ? Number(form.storage_limit_mb) : null,
+      storageLimitMb: null,
       periodicLimit: form.periodic_limit ? Number(form.periodic_limit) : null,
       featureFlags: {
         vaultAccess: form.vaultAccess,
@@ -275,15 +273,6 @@ export default function PlansPage() {
                             placeholder="Unlimited"
                             value={form.user_limit}
                             onChange={(e) => setForm({ ...form, user_limit: e.target.value })}
-                            className="text-xs font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Storage Limit (MB)</Label>
-                          <Input
-                            placeholder="Unlimited"
-                            value={form.storage_limit_mb}
-                            onChange={(e) => setForm({ ...form, storage_limit_mb: e.target.value })}
                             className="text-xs font-mono"
                           />
                         </div>

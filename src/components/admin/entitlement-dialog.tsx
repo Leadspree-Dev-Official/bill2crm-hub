@@ -43,7 +43,6 @@ export function EntitlementDialog({
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState('')
   const [isLifetime, setIsLifetime] = useState(false)
   const [userLimitOverride, setUserLimitOverride] = useState('')
-  const [storageLimitOverride, setStorageLimitOverride] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -63,7 +62,6 @@ export function EntitlementDialog({
     setCurrentPeriodEnd(sub?.current_period_end ? sub.current_period_end.slice(0, 10) : '')
     setIsLifetime(sub?.is_lifetime ?? false)
     setUserLimitOverride(sub?.user_limit_override?.toString() ?? '')
-    setStorageLimitOverride(sub?.storage_limit_override_mb?.toString() ?? '')
   }, [tenant, defaultPlanId])
 
   async function save() {
@@ -77,7 +75,7 @@ export function EntitlementDialog({
       isLifetime,
       billingCycle: null,
       userLimitOverride: userLimitOverride ? Number(userLimitOverride) : null,
-      storageLimitOverrideMb: storageLimitOverride ? Number(storageLimitOverride) : null,
+      storageLimitOverrideMb: null,
     })
     setSaving(false)
 
@@ -145,15 +143,6 @@ export function EntitlementDialog({
               placeholder="Plan default"
               value={userLimitOverride}
               onChange={(e) => setUserLimitOverride(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Storage override (MB)</Label>
-            <Input
-              type="number"
-              placeholder="Plan default"
-              value={storageLimitOverride}
-              onChange={(e) => setStorageLimitOverride(e.target.value)}
             />
           </div>
         </div>
