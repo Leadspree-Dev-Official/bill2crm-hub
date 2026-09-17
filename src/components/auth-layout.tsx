@@ -54,7 +54,7 @@ export function AuthLayout({
         <div className="relative px-14">
           <p className="eyebrow">Account & billing</p>
           <p className="mt-4 max-w-md font-display text-2xl font-medium leading-snug">
-            This is the control plane for your Bill2CRM instance — signup, plan, limits and access. The billing
+            This is the control panel for your Bill2CRM instance — signup, plan, limits and access. The billing
             counter itself lives in your app.
           </p>
           <ul className="mt-8 space-y-3">

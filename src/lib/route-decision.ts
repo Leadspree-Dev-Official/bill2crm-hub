@@ -3,7 +3,7 @@
  * functions of auth state.
  *
  * They live apart from the components so they can be tested directly. These three predicates
- * are the entire access-control boundary of the control-plane UI — everything behind /admin is
+ * are the entire access-control boundary of the control-panel UI — everything behind /admin is
  * gated by nothing else on the client — and the ordering between them is load-bearing in a way
  * that is easy to get wrong: a recovery session is a real session, so any guard that checks
  * `session` before `isPasswordRecovery` will wave a half-authenticated user through to the

@@ -130,7 +130,7 @@
 }
 
 /*
- * App shell canvas (dashboard + control plane), light theme only.
+ * App shell canvas (dashboard + control panel), light theme only.
  * The page itself goes pure white; panels keep their separation from borders
  * and the card shadow rather than from a tinted page behind them.
  * Marketing pages keep the warm off-white canvas they were designed against.

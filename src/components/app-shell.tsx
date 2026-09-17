@@ -51,7 +51,7 @@ const workspaceNav: NavItem[] = [
   { to: '/dashboard/upgrade', label: 'Plan & upgrade', icon: ArrowUpRight, end: true },
 ]
 
-const controlPlaneNav: NavItem[] = [
+const controlPanelNav: NavItem[] = [
   { to: '/admin', label: 'Tenants', icon: Building2, end: true },
   { to: '/admin/upgrade-requests', label: 'Upgrade requests', icon: TrendingUp },
   { to: '/admin/app-links', label: 'App links', icon: Server },
@@ -110,7 +110,7 @@ function AppSidebar({ pending }: { pending: number }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border px-3">
-        <BrandLock to="/dashboard" suffix={inAdmin ? 'control-plane' : 'workspace'} />
+        <BrandLock to="/dashboard" suffix={inAdmin ? 'control-panel' : 'workspace'} />
       </SidebarHeader>
 
       <SidebarContent>
@@ -136,9 +136,9 @@ function AppSidebar({ pending }: { pending: number }) {
         {isSuperAdmin ? (
           <>
             <SidebarGroup>
-              <SidebarGroupLabel>Control plane</SidebarGroupLabel>
+              <SidebarGroupLabel>Control panel</SidebarGroupLabel>
               <SidebarGroupContent>
-                <SidebarMenu>{controlPlaneNav.map(renderItem)}</SidebarMenu>
+                <SidebarMenu>{controlPanelNav.map(renderItem)}</SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
 
@@ -180,7 +180,7 @@ function AppSidebar({ pending }: { pending: number }) {
   )
 }
 
-/** The single shell behind every signed-in surface — workspace and control plane alike.
+/** The single shell behind every signed-in surface — workspace and control panel alike.
  *  Both share one sidebar; only the header strip and the content measure differ. */
 export function AppShell({ children }: { children: ReactNode }) {
   const { tenant, user, isSuperAdmin } = useAuth()

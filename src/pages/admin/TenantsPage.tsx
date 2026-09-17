@@ -253,7 +253,7 @@ export default function TenantsPage() {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Purge {tenant.business_name}?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This permanently deletes their control-plane tenant record and their organization,
+                              This permanently deletes their control-panel tenant record and their organization,
                               data, and login in the Web App. This cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
