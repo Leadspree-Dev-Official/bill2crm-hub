@@ -126,16 +126,16 @@ export default function AppLinksPage() {
 
     const trimmedCapacity = form.capacitySeats.trim()
     if (trimmedCapacity && !/^\d+$/.test(trimmedCapacity)) {
-      toast.error('Capacity must be a whole number of seats')
+      toast.error('Capacity must be a whole number of main users')
       return
     }
     const capacitySeatsOverride = trimmedCapacity ? Number(trimmedCapacity) : null
     if (capacitySeatsOverride !== null && capacitySeatsOverride < 1) {
-      toast.error('Capacity must be at least 1 seat')
+      toast.error('Capacity must be at least 1 main user')
       return
     }
     if (form.tier === 'hosted' && capacitySeatsOverride === null) {
-      toast.error('A hosted server needs an explicit seat capacity', {
+      toast.error('A hosted server needs an explicit capacity (main users)', {
         description: "Supabase's tiers imply a ceiling; a DigitalOcean or Contabo box doesn't.",
       })
       return
@@ -234,7 +234,7 @@ export default function AppLinksPage() {
         description={
           <>
             Where "Launch my app" and entitlement sync send a tenant. New signups go to the default link while it
-            has seats free, then overflow to whichever server has the most room; a specific tenant can be pointed
+            has main user capacity free, then overflow to whichever server has the most room; a specific tenant can be pointed
             at a different one from <span className="font-medium text-foreground">Tenants → Reassign</span> —
             useful for a dedicated, private cloud instance.
           </>
@@ -327,7 +327,7 @@ export default function AppLinksPage() {
                       <Label>
                         Capacity{' '}
                         <span className="font-normal text-muted-foreground">
-                          {form.tier === 'hosted' ? '(required)' : '(seats)'}
+                          {form.tier === 'hosted' ? '(required)' : '(main users)'}
                         </span>
                       </Label>
                       <Input
@@ -380,7 +380,7 @@ export default function AppLinksPage() {
                 <TableHead>Supabase URL</TableHead>
                 <TableHead>App URL</TableHead>
                 <TableHead>Supabase Tier</TableHead>
-                <TableHead>Capacity</TableHead>
+                <TableHead>Capacity (Main users)</TableHead>
                 <TableHead>Tenants</TableHead>
                 <TableHead>Health</TableHead>
                 <TableHead>Status</TableHead>
