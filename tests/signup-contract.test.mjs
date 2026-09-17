@@ -65,12 +65,25 @@ test('SIGNUP-002 the transcribed SQL rule is the one in the migration', () => {
   assert.match(triggerSrc, /trim\(both '-' from v_base_slug\)/)
 })
 
-test('SIGNUP-003 the preview no longer hardcodes a domain', () => {
+test('SIGNUP-003 the preview promises no hostname at all', () => {
+  // Superseded the old `{subdomain}.{ROOT_DOMAIN}` preview (removed in 17afeec). The fleet
+  // serves every tenant of a server from ONE address, and which server a tenant lands on is
+  // decided by free capacity at signup — so at this point in the flow there is no hostname
+  // to show. Templating ROOT_DOMAIN in was just a portable way to name a host that does not
+  // resolve. The real address comes from app_targets.app_base_url, on the dashboard.
   assert.ok(
     !/\{subdomain\}\.bill2crm\.in/.test(signupSrc),
     'the instance preview hardcodes bill2crm.in and will lie on any other deployment',
   )
-  assert.match(signupSrc, /\{subdomain\}\.\{ROOT_DOMAIN\}/)
+  assert.ok(
+    !/\{subdomain\}\.\{ROOT_DOMAIN\}/.test(signupSrc),
+    'the instance preview derives a per-tenant hostname; the live fleet has none',
+  )
+  assert.match(
+    signupSrc,
+    /Workspace ID: \{subdomain\}/,
+    'the slug should still be shown as an identifier, just not dressed up as a URL',
+  )
 })
 
 test('SIGNUP-004 signup handles the no-session (confirmation required) response', () => {

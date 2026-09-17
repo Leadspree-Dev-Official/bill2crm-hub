@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase, tenantAppUrl } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type { Tenant, TenantSubscription } from '@/types/database'
 
 interface AuthContextValue {
@@ -93,10 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setTenant(tenantRow)
       setSubscription(Array.isArray(tenant_subscriptions) ? (tenant_subscriptions[0] ?? null) : tenant_subscriptions)
-      // No address recorded for this tenant's server yet — fall back to the old
-      // <slug>.<ROOT_DOMAIN> derivation so the dashboard still shows something.
+      // No address recorded for this tenant's server yet — leave it null. The old
+      // <slug>.<ROOT_DOMAIN> derivation points at a host that does not resolve, so showing
+      // it is worse than showing nothing: consumers guard on null and hide the address.
       const resolved = typeof appUrlResult.data === 'string' ? appUrlResult.data.replace(/\/+$/, '') : ''
-      setAppBaseUrl(resolved || tenantAppUrl(tenantRow.subdomain_slug))
+      setAppBaseUrl(resolved || null)
     } else {
       setTenant(null)
       setSubscription(null)

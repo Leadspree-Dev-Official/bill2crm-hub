@@ -39,15 +39,38 @@ export default function DashboardPage() {
   }, [subscription?.plan_id])
 
   async function handleLaunch() {
+    // The tab is opened SYNCHRONOUSLY, before the await: a window.open() that runs after an
+    // async hop has lost the user-gesture context and browsers block it as a popup. So we
+    // claim the tab on click and point it at the link once minted. If it is blocked anyway
+    // (null handle), fall back to navigating this tab rather than dead-ending.
+    //
+    // No 'noopener' in the feature string — with it the browser returns null by design and
+    // there would be no handle left to navigate. The reverse-tabnabbing protection it would
+    // have given is applied below instead, by severing opener before the URL is set.
+    const tab = window.open('about:blank', '_blank')
+
     setLaunching(true)
     const { url, error } = await requestAppLaunchUrl()
     setLaunching(false)
 
     if (error || !url) {
+      tab?.close()
       toast.error("Couldn't open your app", { description: error ?? 'Please try again in a moment.' })
       return
     }
-    window.location.href = url
+
+    if (tab) {
+      // Sever the back-reference before handing the tab a real origin, so the Web App can
+      // never reach back into this dashboard through window.opener.
+      try {
+        tab.opener = null
+      } catch {
+        /* cross-origin already, or blocked — the tab is about:blank, nothing to protect yet */
+      }
+      tab.location.href = url
+    } else {
+      window.location.href = url
+    }
   }
 
   async function handleCopyLink() {
@@ -134,15 +157,20 @@ export default function DashboardPage() {
               <h1 className="truncate text-2xl font-semibold">{tenant.business_name}</h1>
               <StatusBadge status={tenant.status} />
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <code className="rounded-sm border border-border bg-surface-muted px-2.5 py-1.5 font-mono text-[12px] text-muted-foreground">
-                {instanceUrl ?? 'Resolving your app address…'}
-              </code>
-              <Button variant="ghost" size="sm" onClick={handleCopyLink} disabled={!instanceUrl} className="h-8">
-                {copied ? <Check className="size-3.5 text-accent" /> : <Copy className="size-3.5" />}
-                {copied ? 'Copied' : 'Copy'}
-              </Button>
-            </div>
+            {/* Null means this tenant's server has no app_base_url recorded. Rather than show a
+                derived <slug>.<ROOT_DOMAIN> address that does not resolve, show nothing at all —
+                "Launch my app" still works, since it resolves the target server-side. */}
+            {instanceUrl ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <code className="rounded-sm border border-border bg-surface-muted px-2.5 py-1.5 font-mono text-[12px] text-muted-foreground">
+                  {instanceUrl}
+                </code>
+                <Button variant="ghost" size="sm" onClick={handleCopyLink} className="h-8">
+                  {copied ? <Check className="size-3.5 text-accent" /> : <Copy className="size-3.5" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
