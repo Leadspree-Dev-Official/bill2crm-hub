@@ -6,6 +6,7 @@ import {
   Building2,
   CreditCard,
   ExternalLink,
+  Globe,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -147,6 +148,14 @@ function AppSidebar({ pending }: { pending: number }) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ) : null}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Main website">
+                  <Link to="/" target="_blank" rel="noopener noreferrer">
+                    <Globe className="size-4" />
+                    <span>Main website</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
