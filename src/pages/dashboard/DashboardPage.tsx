@@ -5,14 +5,18 @@ import { supabase } from '@/lib/supabase'
 import { requestAppLaunchUrl } from '@/lib/api/launch-app'
 import type { SubscriptionPlan } from '@/types/database'
 import { AppShell } from '@/components/app-shell'
+import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { daysRemaining, formatInr, formatLimit } from '@/lib/plan-utils'
-import { ArrowUpRight, Check, Copy, Loader2, Rocket, Users } from 'lucide-react'
+import { daysRemaining, formatInr, formatLimit, resolveTenantDisplayStatus } from '@/lib/plan-utils'
+import { ArrowUpRight, AlertTriangle, Check, Copy, CreditCard, Loader2, MessageSquare, Receipt, Rocket, Sparkles, Users, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import type { LucideIcon } from 'lucide-react'
+import { buildWhatsAppSupportLink } from '@/lib/whatsapp'
+import { acknowledgeBillingNotification, type BillingNotification, type BillingPayment } from '@/lib/api/billing'
+import { cn } from '@/lib/utils'
 
 const BILLING_CYCLE_LABEL: Record<string, string> = { monthly: 'Monthly', yearly: 'Yearly', lifetime: 'Lifetime' }
 
@@ -34,6 +38,9 @@ export default function DashboardPage() {
     void refresh()
   }, [refresh])
 
+  const [billingNotifications, setBillingNotifications] = useState<BillingNotification[]>([])
+  const [payments, setPayments] = useState<BillingPayment[]>([])
+
   useEffect(() => {
     if (!subscription?.plan_id) return
     supabase
@@ -43,6 +50,30 @@ export default function DashboardPage() {
       .maybeSingle()
       .then(({ data }) => setPlan(data as SubscriptionPlan | null))
   }, [subscription?.plan_id])
+
+  useEffect(() => {
+    if (!tenant?.id) return
+    supabase
+      .from('billing_notifications')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .is('acknowledged_at', null)
+      .order('due_at', { ascending: false })
+      .then(({ data }) => setBillingNotifications((data as BillingNotification[]) ?? []))
+
+    supabase
+      .from('billing_payments')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+      .then(({ data }) => setPayments((data as BillingPayment[]) ?? []))
+  }, [tenant?.id])
+
+  async function handleDismissNotification(id: string) {
+    await acknowledgeBillingNotification(id)
+    setBillingNotifications((prev) => prev.filter((n) => n.id !== id))
+  }
 
   async function handleLaunch() {
     // The tab is opened SYNCHRONOUSLY, before the await: a window.open() that runs after an
@@ -256,14 +287,159 @@ export default function DashboardPage() {
   const priceSuffix = subscription?.is_lifetime ? 'one-time' : subscription?.billing_cycle === 'yearly' ? '/year' : '/month'
   const instanceUrl = appBaseUrl
 
+  const isPaused = tenant.status === 'paused'
+  const isSuspended = tenant.status === 'suspended'
+  const isInactiveBlocked = isPaused || isSuspended
+  const displayStatus = resolveTenantDisplayStatus(tenant.status, subscription)
+
+  const isPaid =
+    Boolean(subscription?.is_lifetime) ||
+    Boolean(subscription?.billing_cycle === 'lifetime') ||
+    (Boolean(subscription?.plan_id && subscription.plan_id !== 'plan_free' && subscription.plan_id !== 'plan_trial') &&
+      subscription?.status === 'active')
+
+  const isTrialExpired =
+    !isPaid &&
+    (displayStatus === 'free' ||
+      subscription?.status === 'free' ||
+      tenant.status === 'free' ||
+      (isTrial && (trialDays === 0 || (subscription?.trial_ends_at && new Date(subscription.trial_ends_at).getTime() <= renderedAt))))
+
+  const waSupportLink = buildWhatsAppSupportLink({
+    businessName: tenant.business_name,
+    subdomainSlug: tenant.subdomain_slug,
+    reason: isPaused ? 'paused due to 15+ days of inactivity' : 'suspended due to 30+ days of inactivity',
+  })
+
   return (
     <AppShell>
+      {isTrialExpired && (
+        <div className="mb-6 overflow-hidden rounded-lg border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-5 text-amber-950 dark:text-amber-100 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="rounded-full bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                <Sparkles className="size-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-semibold">Your 7-Day Free Trial Has Expired</h3>
+                  <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] uppercase font-mono">
+                    Free Tier Active
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-amber-900/80 dark:text-amber-200/80 max-w-2xl">
+                  Your workspace is currently operating under Free tier restrictions (1 user, 10 invoices/month limit, manual reminders only). Upgrade to unlock unlimited invoices, automated WhatsApp payment reminders, multi-user access, and priority cloud infrastructure.
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 sm:self-center">
+              <Button asChild size="sm" className="w-full sm:w-auto gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-sm font-medium">
+                <Link to="/dashboard/upgrade">
+                  <Zap className="size-3.5" />
+                  Upgrade Workspace Now
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {billingNotifications.map((notif) => (
+        <div
+          key={notif.id}
+          className={cn(
+            'mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4 text-sm',
+            notif.severity === 'critical'
+              ? 'border-destructive/50 bg-destructive/10 text-destructive'
+              : notif.severity === 'warning'
+                ? 'border-amber-400/50 bg-amber-50/80 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'
+                : 'border-sky-400/50 bg-sky-50/80 text-sky-900 dark:bg-sky-950/30 dark:text-sky-200',
+          )}
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold">{notif.title}</h3>
+              <p className="mt-0.5 text-xs opacity-90">{notif.body}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" className="h-8 gap-1.5 bg-primary text-primary-foreground">
+              <Link to="/dashboard/upgrade">
+                <CreditCard className="size-3.5" />
+                Pay / Renew Plan
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => handleDismissNotification(notif.id)}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      ))}
+
+      {isPaused && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-amber-400/50 bg-amber-50/80 dark:bg-amber-950/30 p-4 text-amber-900 dark:text-amber-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <h3 className="text-sm font-semibold">Workspace Paused (15+ Days Inactivity)</h3>
+              <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-300">
+                Neither you nor your invited members have logged in for over 15 days. All logins have been paused until you contact an administrator. If inactivity reaches 30 days, your workspace will be automatically suspended.
+              </p>
+            </div>
+          </div>
+          {waSupportLink && (
+            <Button
+              asChild
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              <a href={waSupportLink} target="_blank" rel="noopener noreferrer">
+                <MessageSquare className="mr-1.5 size-3.5" />
+                Contact Admin to Reactivate
+              </a>
+            </Button>
+          )}
+        </div>
+      )}
+
+      {isSuspended && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold">Workspace Suspended (30+ Days Inactivity)</h3>
+              <p className="mt-0.5 text-xs text-destructive/90">
+                Your workspace was automatically suspended after 30 days of inactivity. Only an administrator can resume your workspace. If non-usage reaches 60 days, all account data will be permanently deleted.
+              </p>
+            </div>
+          </div>
+          {waSupportLink && (
+            <Button
+              asChild
+              size="sm"
+              variant="destructive"
+            >
+              <a href={waSupportLink} target="_blank" rel="noopener noreferrer">
+                <MessageSquare className="mr-1.5 size-3.5" />
+                Contact Admin to Resume
+              </a>
+            </Button>
+          )}
+        </div>
+      )}
+
       <section className="rounded-lg border border-border bg-surface p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="truncate text-2xl font-semibold">{tenant.business_name}</h1>
-              <StatusBadge status={tenant.status} />
+              <StatusBadge status={resolveTenantDisplayStatus(tenant.status, subscription)} />
             </div>
             {/* Null means this tenant's server has no app_base_url recorded. Rather than show a
                 derived <slug>.<ROOT_DOMAIN> address that does not resolve, show nothing at all —
@@ -282,9 +458,29 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Button size="lg" onClick={handleLaunch} disabled={launching || copyingLaunch} className="shrink-0 gap-2">
-              {launching ? <Loader2 className="size-4 animate-spin" /> : <Rocket className="size-4" />}
-              {launching ? 'Opening workspace…' : 'Launch my app'}
+            <Button
+              size="lg"
+              onClick={handleLaunch}
+              disabled={launching || copyingLaunch || isInactiveBlocked}
+              title={isInactiveBlocked ? 'Workspace is paused/suspended due to inactivity' : undefined}
+              className="shrink-0 gap-2"
+            >
+              {launching ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : isPaused ? (
+                <AlertTriangle className="size-4 text-amber-500" />
+              ) : isSuspended ? (
+                <AlertTriangle className="size-4" />
+              ) : (
+                <Rocket className="size-4" />
+              )}
+              {launching
+                ? 'Opening workspace…'
+                : isPaused
+                  ? 'Workspace Paused'
+                  : isSuspended
+                    ? 'Workspace Suspended'
+                    : 'Launch my app'}
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -343,7 +539,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {isTrial && subscription?.trial_ends_at ? (
+          {isTrial && subscription?.trial_ends_at && trialDays !== 0 ? (
             <div className="mt-6 rounded-md border border-border bg-surface-muted p-4">
               <div className="flex items-baseline justify-between">
                 <p className="text-sm font-medium">Free trial</p>
@@ -361,6 +557,16 @@ export default function DashboardPage() {
                 })}
               </p>
             </div>
+          ) : isTrialExpired ? (
+            <div className="mt-6 rounded-md border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-900 dark:text-amber-200">
+              <div className="flex items-center gap-2 font-medium">
+                <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Trial expired · Operating on Free plan with usage limits</span>
+              </div>
+              <p className="mt-1.5 text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
+                Upgrade to a paid monthly, yearly, or lifetime plan to remove counter and invoice limits and enable automated reminders.
+              </p>
+            </div>
           ) : (
             <div className="mt-6 rounded-md border border-border bg-surface-muted p-4 text-sm text-muted-foreground">
               {subscription?.is_lifetime
@@ -371,9 +577,9 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <Button asChild className="mt-5 w-full" variant={isTrial ? 'default' : 'outline'}>
+          <Button asChild className="mt-5 w-full gap-1.5" variant={isTrial || isTrialExpired ? 'default' : 'outline'}>
             <Link to="/dashboard/upgrade">
-              {isTrial ? 'Upgrade before the trial ends' : 'Change plan'}
+              {isTrialExpired ? 'Upgrade Workspace' : isTrial ? 'Upgrade before the trial ends' : 'Change plan'}
               <ArrowUpRight className="size-4" />
             </Link>
           </Button>
@@ -396,6 +602,53 @@ export default function DashboardPage() {
           </p>
         </section>
       </div>
+
+      {payments.length > 0 && (
+        <section className="mt-6 rounded-lg border border-border bg-surface p-6">
+          <div className="flex items-center gap-2">
+            <Receipt className="size-4 text-muted-foreground" />
+            <h2 className="text-base font-semibold">Payment History & Tax Invoices</h2>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th className="pb-2 font-medium">Invoice #</th>
+                  <th className="pb-2 font-medium">Date</th>
+                  <th className="pb-2 font-medium">Plan & Cycle</th>
+                  <th className="pb-2 font-medium">Amount</th>
+                  <th className="pb-2 font-medium">Method</th>
+                  <th className="pb-2 text-right font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {payments.map((p) => (
+                  <tr key={p.id} className="text-xs">
+                    <td className="py-2.5 font-mono font-medium text-foreground">{p.invoice_no || '—'}</td>
+                    <td className="py-2.5 text-muted-foreground">
+                      {new Date(p.captured_at || p.created_at).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="py-2.5 capitalize">{p.plan_id ? p.plan_id.replace('plan_', '') : '—'} ({p.billing_cycle || '—'})</td>
+                    <td className="py-2.5 font-medium">
+                      ₹{Math.round((p.amount_paise + (p.tax_paise || 0)) / 100).toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-2.5 capitalize text-muted-foreground">{p.method.replace('_', ' ')}</td>
+                    <td className="py-2.5 text-right">
+                      <span className="inline-flex rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 capitalize">
+                        {p.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </AppShell>
   )
 }

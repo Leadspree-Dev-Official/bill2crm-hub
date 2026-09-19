@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { AppTargetOccupancy, AppTargetTier, BillingCycle, TenantStatus } from '@/types/database'
+import type { AppTargetOccupancy, AppTargetTier, BillingCycle, TenantActivity, TenantStatus } from '@/types/database'
 
 export interface SetTenantEntitlementInput {
   tenantId: string
@@ -236,3 +236,68 @@ export async function testAppTarget(targetId: string): Promise<TestAppTargetResu
   }
   return data ?? { ok: false, error: 'No response from test function' }
 }
+
+export interface TenantsActivityResult {
+  activity?: Record<string, TenantActivity>
+  error?: string | null
+}
+
+export async function fetchTenantsActivity(): Promise<TenantsActivityResult> {
+  const { data, error } = await supabase.functions.invoke<{ activity?: Record<string, TenantActivity>; error?: string }>(
+    'admin-tenant-activity',
+    { method: 'POST' },
+  )
+  if (error) {
+    return { error: error.message }
+  }
+  return { activity: data?.activity ?? {}, error: data?.error ?? null }
+}
+
+export async function resumeTenant(tenantId: string) {
+  const { data: newStatus, error } = await supabase.rpc('admin_resume_tenant', {
+    p_tenant_id: tenantId,
+  })
+  if (error) {
+    return { status: null, error: error.message }
+  }
+
+  // Best-effort push status update into Web App project
+  const { error: syncError } = await supabase.functions.invoke('sync-tenant-to-webapp', {
+    method: 'POST',
+    body: {
+      type: 'UPDATE',
+      table: 'tenants',
+      record: { id: tenantId, status: newStatus },
+    },
+  })
+  if (syncError) {
+    console.warn('Tenant resumed locally but Web App sync failed:', syncError.message)
+  }
+
+  return { status: newStatus as TenantStatus, error: null }
+}
+
+export interface InactivityLifecycleResult {
+  ok: boolean
+  dryRun?: boolean
+  totalChecked?: number
+  pausedCount?: number
+  suspendedCount?: number
+  purgedCount?: number
+  error?: string | null
+}
+
+export async function triggerInactivityLifecycle(options?: { dryRun?: boolean; tenantId?: string }): Promise<InactivityLifecycleResult> {
+  const { data, error } = await supabase.functions.invoke<InactivityLifecycleResult>(
+    'enforce-inactivity-lifecycle',
+    {
+      method: 'POST',
+      body: options ?? {},
+    },
+  )
+  if (error) {
+    return { ok: false, error: error.message }
+  }
+  return data ?? { ok: false, error: 'No response from lifecycle function' }
+}
+

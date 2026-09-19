@@ -1,10 +1,12 @@
 // Triggered by Supabase Database Webhooks on INSERT to `tenants` and UPDATE to
-// `tenant_subscriptions` (configured in the dashboard — see supabase/README.md). Pushes this
-// project's entitlement for a tenant into the Web App project's `organizations` /
-// `organization_subscriptions` tables, and makes sure a matching auth identity exists there.
+// `tenant_subscriptions` (configured in the dashboard — see supabase/README.md), OR invoked
+// directly by Super Admin callers (e.g. resumeTenant). Pushes this project's entitlement for a
+// tenant into the Web App project's `organizations` / `organization_subscriptions` tables, and
+// makes sure a matching auth identity exists there.
 //
-// verify_jwt is off for this function (see supabase/config.toml) — Database Webhooks don't
-// carry a user session, so this checks a shared secret header instead.
+// Supports dual auth:
+// 1. Shared secret header `x-webhook-secret` (for automated Database Webhooks without user sessions).
+// 2. Super Admin Bearer JWT (for authenticated control plane actions).
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders, mapOrgStatus, mapSubscriptionStatus, resolveAppTarget, type OwnTenantStatus } from '../_shared/webapp-bridge.ts'
@@ -19,8 +21,29 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const expectedSecret = Deno.env.get('SYNC_WEBHOOK_SECRET')
-  if (!expectedSecret || req.headers.get('x-webhook-secret') !== expectedSecret) {
-    return new Response('Unauthorized', { status: 401 })
+  const webhookSecret = req.headers.get('x-webhook-secret')
+  let isAuthorized = Boolean(expectedSecret && webhookSecret === expectedSecret)
+
+  if (!isAuthorized) {
+    const authHeader = req.headers.get('Authorization')
+    if (authHeader) {
+      const ownAsCaller = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } }
+      )
+      const { data: isSuperAdmin } = await ownAsCaller.rpc('is_super_admin')
+      if (isSuperAdmin) {
+        isAuthorized = true
+      }
+    }
+  }
+
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   try {
@@ -37,7 +60,10 @@ Deno.serve(async (req) => {
       .single()
 
     if (tenantError || !tenant) {
-      return new Response(JSON.stringify({ error: tenantError?.message ?? 'Tenant not found' }), { status: 404 })
+      return new Response(JSON.stringify({ error: tenantError?.message ?? 'Tenant not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const rawSubscription = tenant.tenant_subscriptions
@@ -45,13 +71,19 @@ Deno.serve(async (req) => {
     const rawPlan = subscription?.subscription_plans
     const plan = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan
     if (!subscription || !plan) {
-      return new Response(JSON.stringify({ error: 'Tenant has no subscription/plan yet' }), { status: 200 })
+      return new Response(JSON.stringify({ error: 'Tenant has no subscription/plan yet' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const { data: authUser } = await own.auth.admin.getUserById(tenant.owner_user_id)
     const email = authUser?.user?.email
     if (!email) {
-      return new Response(JSON.stringify({ error: 'Could not resolve owner email' }), { status: 404 })
+      return new Response(JSON.stringify({ error: 'Could not resolve owner email' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const { url, serviceRoleKey } = await resolveAppTarget(own, tenantId)

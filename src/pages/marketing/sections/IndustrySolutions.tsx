@@ -17,7 +17,7 @@ const INDUSTRIES = [
     icon: '💼',
     title: 'Agencies, Consultants & Freelancers',
     desc: 'Win work with proposals, close it with signed agreements, and bill it in milestones.',
-    tags: ['Proposals', 'e-Sign agreements', 'Milestone billing', 'Mini CRM'],
+    tags: ['Proposals', 'e-Sign agreements', 'Milestone billing', 'CRM'],
   },
   {
     icon: '💇',
@@ -35,7 +35,7 @@ const INDUSTRIES = [
 
 export function IndustrySolutions() {
   return (
-    <section id="industries" className="relative border-b border-border bg-surface px-5 py-20">
+    <section id="industries" className="relative border-b border-border bg-surface px-4 py-12 sm:px-5 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-6xl">
         <SectionHead
           eyebrow="Built for your business"
@@ -44,11 +44,11 @@ export function IndustrySolutions() {
         />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {INDUSTRIES.map((ind) => (
-            <div key={ind.title} className="rounded-lg border border-border bg-background p-6">
-              <span className="grid size-11 place-items-center rounded-md bg-primary-soft text-xl">{ind.icon}</span>
-              <h3 className="mt-4 text-base font-semibold">{ind.title}</h3>
+            <div key={ind.title} className="rounded-lg border border-border bg-background p-4 sm:p-6">
+              <span className="grid size-10 sm:size-11 place-items-center rounded-md bg-primary-soft text-xl">{ind.icon}</span>
+              <h3 className="mt-3.5 sm:mt-4 text-base font-semibold">{ind.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{ind.desc}</p>
-              <div className="mt-4 flex flex-wrap gap-1.5">
+              <div className="mt-3.5 sm:mt-4 flex flex-wrap gap-1.5">
                 {ind.tags.map((t) => (
                   <span key={t} className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                     {t}
@@ -57,7 +57,7 @@ export function IndustrySolutions() {
               </div>
             </div>
           ))}
-          <div className="flex flex-col items-start justify-center rounded-lg border border-dashed border-border-strong bg-background/60 p-6">
+          <div className="flex flex-col items-start justify-center rounded-lg border border-dashed border-border-strong bg-background/60 p-4 sm:p-6">
             <h3 className="text-base font-semibold">Something else?</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               If you send invoices and follow up with customers, Bill2CRM fits — across trades and services.

@@ -41,6 +41,9 @@ Deno.serve(async (req) => {
     if (tenantError || !tenant) {
       return json({ error: 'No workspace found for this account' }, 404)
     }
+    if (tenant.status === 'paused') {
+      return json({ error: 'Workspace is paused due to inactivity (15+ days without logins). Contact admin to reactivate.' }, 403)
+    }
     if (tenant.status === 'suspended' || tenant.status === 'cancelled') {
       return json({ error: `Workspace is ${tenant.status}. Contact support.` }, 403)
     }
@@ -80,6 +83,8 @@ Deno.serve(async (req) => {
       const reason = error?.message ?? 'No action_link returned'
       throw new Error(`Could not mint a sign-in link for ${redirectTo} — ${reason}`)
     }
+
+    await ownService.rpc('touch_tenant_activity', { p_tenant_id: tenant.id }).catch(() => {})
 
     return json({ url: data.properties.action_link, redirectTo })
   } catch (err) {

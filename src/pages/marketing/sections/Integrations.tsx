@@ -4,18 +4,18 @@ const INTEGRATIONS = ['WhatsApp', 'Email', 'SMS', 'Zapier', 'Make', 'n8n', 'Tall
 
 export function Integrations() {
   return (
-    <section className="relative border-b border-border bg-surface px-5 py-20">
+    <section className="relative border-b border-border bg-surface px-4 py-12 sm:px-5 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-4xl text-center">
         <SectionHead
           eyebrow="Integrations"
           title="Connects to the tools you already use"
           desc="Out-of-the-box messaging, and no-code webhook automation for everything else — no API key required in your own code."
         />
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           {INTEGRATIONS.map((label) => (
             <span
               key={label}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium"
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium"
             >
               {label}
             </span>

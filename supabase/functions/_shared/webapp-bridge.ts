@@ -65,10 +65,11 @@ export async function resolveAllAppTargets(own: SupabaseClient) {
   }))
 }
 
-export type OwnTenantStatus = 'trial' | 'active' | 'free' | 'past_due' | 'suspended' | 'cancelled'
+export type OwnTenantStatus = 'trial' | 'active' | 'free' | 'past_due' | 'paused' | 'suspended' | 'cancelled'
 
-/** organizations.status in the Web App project only has three values. */
-export function mapOrgStatus(status: OwnTenantStatus): 'Pending' | 'Active' | 'Suspended' {
+/** organizations.status in the Web App project. */
+export function mapOrgStatus(status: OwnTenantStatus): 'Pending' | 'Active' | 'Paused' | 'Suspended' {
+  if (status === 'paused') return 'Paused'
   if (status === 'suspended' || status === 'cancelled') return 'Suspended'
   return 'Active'
 }
@@ -77,6 +78,6 @@ export function mapOrgStatus(status: OwnTenantStatus): 'Pending' | 'Active' | 'S
  *  "currently entitled" states there — the Web App itself treats its own trial as 'Paid'. */
 export function mapSubscriptionStatus(status: OwnTenantStatus): 'Pending' | 'Upcoming' | 'Paid' | 'Unpaid' | 'Suspended' {
   if (status === 'past_due') return 'Unpaid'
-  if (status === 'suspended' || status === 'cancelled') return 'Suspended'
+  if (status === 'paused' || status === 'suspended' || status === 'cancelled') return 'Suspended'
   return 'Paid'
 }

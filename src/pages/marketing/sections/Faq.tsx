@@ -46,7 +46,7 @@ const FAQS = [
 
 export function Faq() {
   return (
-    <section id="faq" className="relative border-b border-border px-5 py-20">
+    <section id="faq" className="relative border-b border-border px-4 py-12 sm:px-5 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-3xl">
         <SectionHead
           eyebrow="FAQ"
@@ -56,8 +56,8 @@ export function Faq() {
         <Accordion type="single" collapsible defaultValue="item-0" className="w-full">
           {FAQS.map((f, i) => (
             <AccordionItem key={f.q} value={`item-${i}`}>
-              <AccordionTrigger className="text-left text-[15px] font-medium">{f.q}</AccordionTrigger>
-              <AccordionContent className="text-[15px] leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
+              <AccordionTrigger className="text-left text-sm sm:text-[15px] font-medium py-3.5 sm:py-4">{f.q}</AccordionTrigger>
+              <AccordionContent className="text-xs sm:text-sm leading-relaxed text-muted-foreground">{f.a}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>

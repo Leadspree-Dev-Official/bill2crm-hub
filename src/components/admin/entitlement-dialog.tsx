@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
-const STATUSES: TenantStatus[] = ['trial', 'active', 'free', 'past_due', 'suspended', 'cancelled']
+const STATUSES: TenantStatus[] = ['trial', 'active', 'free', 'past_due', 'paused', 'suspended', 'cancelled']
 
 export function EntitlementDialog({
   tenant,
@@ -57,12 +57,36 @@ export function EntitlementDialog({
   useEffect(() => {
     if (!tenant) return
     const sub = tenant.tenant_subscriptions
-    setPlanId(defaultPlanId ?? sub?.plan_id ?? '')
-    setStatus(tenant.status)
+    const initialPlanId = defaultPlanId ?? sub?.plan_id ?? ''
+    setPlanId(initialPlanId)
+    if (initialPlanId && initialPlanId !== 'plan_free' && (sub?.is_lifetime || defaultPlanId || initialPlanId.includes('lifetime')) && tenant.status === 'free') {
+      setStatus('active')
+    } else {
+      setStatus(tenant.status)
+    }
     setCurrentPeriodEnd(sub?.current_period_end ? sub.current_period_end.slice(0, 10) : '')
-    setIsLifetime(sub?.is_lifetime ?? false)
+    setIsLifetime(sub?.is_lifetime ?? (initialPlanId.includes('lifetime')))
     setUserLimitOverride(sub?.user_limit_override?.toString() ?? '')
   }, [tenant, defaultPlanId])
+
+  function handlePlanChange(newPlanId: string) {
+    setPlanId(newPlanId)
+    if (newPlanId !== 'plan_free' && status === 'free') {
+      setStatus('active')
+    } else if (newPlanId === 'plan_free' && status === 'active') {
+      setStatus('free')
+    }
+    if (newPlanId.includes('lifetime')) {
+      setIsLifetime(true)
+    }
+  }
+
+  function handleLifetimeChange(checked: boolean) {
+    setIsLifetime(checked)
+    if (checked && status === 'free') {
+      setStatus('active')
+    }
+  }
 
   async function save() {
     if (!tenant) return
@@ -100,7 +124,7 @@ export function EntitlementDialog({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Plan</Label>
-            <Select value={planId} onValueChange={setPlanId}>
+            <Select value={planId} onValueChange={handlePlanChange}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Choose plan" />
               </SelectTrigger>
@@ -134,7 +158,7 @@ export function EntitlementDialog({
           </div>
           <div className="flex items-center justify-between rounded-md border px-3 py-2">
             <Label htmlFor="lifetime">Lifetime plan</Label>
-            <Switch id="lifetime" checked={isLifetime} onCheckedChange={setIsLifetime} />
+            <Switch id="lifetime" checked={isLifetime} onCheckedChange={handleLifetimeChange} />
           </div>
           <div className="space-y-2">
             <Label>User limit override</Label>

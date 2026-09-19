@@ -7,6 +7,7 @@ import {
   CreditCard,
   ExternalLink,
   Globe,
+  IndianRupee,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
@@ -19,6 +20,7 @@ import type { LucideIcon } from 'lucide-react'
 
 import { BrandLock } from '@/components/brand'
 import { StatusBadge } from '@/components/status-badge'
+import { resolveTenantDisplayStatus } from '@/lib/plan-utils'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import {
@@ -38,6 +40,7 @@ import {
 } from '@/components/ui/sidebar'
 import { UPGRADE_REQUESTS_EVENT, useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
 
 type NavItem = {
   to: string
@@ -55,6 +58,7 @@ const workspaceNav: NavItem[] = [
 const controlPanelNav: NavItem[] = [
   { to: '/admin', label: 'Tenants', icon: Building2, end: true },
   { to: '/admin/upgrade-requests', label: 'Upgrade requests', icon: TrendingUp },
+  { to: '/admin/billing', label: 'Billing & Revenue', icon: IndianRupee },
   { to: '/admin/app-links', label: 'App links', icon: Server },
   { to: '/admin/plans', label: 'Plans', icon: CreditCard },
 ]
@@ -210,7 +214,7 @@ function AppSidebar({ pending }: { pending: number }) {
 /** The single shell behind every signed-in surface — workspace and control panel alike.
  *  Both share one sidebar; only the header strip and the content measure differ. */
 export function AppShell({ children }: { children: ReactNode }) {
-  const { tenant, user, isSuperAdmin } = useAuth()
+  const { tenant, subscription, user, isSuperAdmin } = useAuth()
   const { pathname } = useLocation()
   const inAdmin = pathname.startsWith('/admin')
   const pending = usePendingUpgradeRequests(isSuperAdmin)
@@ -232,12 +236,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             ) : tenant ? (
               <>
                 <p className="truncate text-sm font-medium">{tenant.business_name}</p>
-                <StatusBadge status={tenant.status} />
+                <StatusBadge status={resolveTenantDisplayStatus(tenant.status, subscription)} />
               </>
             ) : null}
             <div className="ml-auto flex items-center gap-1.5">
               {inAdmin ? null : (
-                <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+                <Button
+                  asChild
+                  size="sm"
+                  variant={tenant && resolveTenantDisplayStatus(tenant.status, subscription) === 'free' ? 'default' : 'outline'}
+                  className={cn(
+                    'hidden sm:inline-flex',
+                    tenant && resolveTenantDisplayStatus(tenant.status, subscription) === 'free' && 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs',
+                  )}
+                >
                   <Link to="/dashboard/upgrade">Upgrade</Link>
                 </Button>
               )}

@@ -1,12 +1,12 @@
 import { SectionHead } from './SectionHead'
 
 const NODES = [
-  { label: 'Invoicing', x: 18, y: 18 },
-  { label: 'POS', x: 82, y: 16 },
-  { label: 'Mini CRM', x: 10, y: 55 },
-  { label: 'Inventory', x: 90, y: 58 },
-  { label: 'HRMS', x: 24, y: 88 },
-  { label: 'Accounting', x: 76, y: 88 },
+  { label: 'Invoicing', x: 22, y: 18 },
+  { label: 'POS', x: 78, y: 18 },
+  { label: 'CRM', x: 18, y: 55 },
+  { label: 'Inventory', x: 82, y: 55 },
+  { label: 'HRMS', x: 26, y: 86 },
+  { label: 'Accounting', x: 74, y: 86 },
 ]
 
 const PROBLEMS = [
@@ -29,7 +29,7 @@ const PROBLEMS = [
 
 export function ProblemSolution() {
   return (
-    <section className="relative border-b border-border bg-surface px-5 py-20">
+    <section className="relative border-b border-border bg-surface px-4 py-12 sm:px-5 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-4xl">
         <SectionHead
           eyebrow="The problem"
@@ -37,7 +37,7 @@ export function ProblemSolution() {
           desc="Most growing Indian businesses stitch together separate apps for billing, customers, stock, staff and accounts — and none of them talk to each other."
         />
 
-        <div className="relative mx-auto mb-16 h-72 max-w-xl sm:h-80">
+        <div className="relative mx-auto mb-10 sm:mb-16 h-64 sm:h-80 max-w-xl">
           <svg viewBox="0 0 100 100" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
             {NODES.map((node) => (
               <line
@@ -53,14 +53,14 @@ export function ProblemSolution() {
               />
             ))}
           </svg>
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-foreground px-4 py-3 text-center shadow-raise">
-            <div className="text-sm font-semibold text-background">Your Business</div>
-            <div className="text-[11px] text-background/60">but everything lives apart</div>
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-foreground px-3 py-2 sm:px-4 sm:py-3 text-center shadow-raise">
+            <div className="text-xs sm:text-sm font-semibold text-background">Your Business</div>
+            <div className="text-[10px] sm:text-[11px] text-background/60">but everything lives apart</div>
           </div>
           {NODES.map((node) => (
             <div
               key={node.label}
-              className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm"
+              className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-border bg-surface px-2.5 py-1 sm:px-3 sm:py-1.5 text-[11px] sm:text-xs font-semibold text-muted-foreground shadow-sm"
               style={{ left: `${node.x}%`, top: `${node.y}%` }}
             >
               {node.label}
@@ -70,7 +70,7 @@ export function ProblemSolution() {
 
         <div className="grid gap-4 sm:grid-cols-3">
           {PROBLEMS.map((p) => (
-            <div key={p.n} className="rounded-lg border border-border bg-surface p-6">
+            <div key={p.n} className="rounded-lg border border-border bg-surface p-4 sm:p-6">
               <span className="tabular font-display text-2xl font-semibold text-primary/30">{p.n}</span>
               <h3 className="mt-2 text-base font-semibold">{p.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>

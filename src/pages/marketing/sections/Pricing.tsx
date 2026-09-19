@@ -11,6 +11,12 @@ import { SectionHead } from './SectionHead'
 
 type BillingToggle = 'monthly' | 'yearly'
 
+const REGULAR_YEARLY_PRICES: Record<string, number> = {
+  plan_starter: 1499,
+  plan_cloud_saas: 3499,
+  plan_private_cloud: 4999,
+}
+
 export function Pricing() {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [billing, setBilling] = useState<BillingToggle>('yearly')
@@ -25,15 +31,25 @@ export function Pricing() {
   }, [])
 
   return (
-    <section id="pricing" className="relative border-b border-border bg-surface-muted px-5 py-20">
+    <section id="pricing" className="relative border-b border-border bg-surface-muted px-4 py-12 sm:px-5 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-6xl">
         <SectionHead
-          eyebrow="Pricing"
+          eyebrow="Launch Pricing"
           title="Simple pricing that pays for itself"
           desc="Start free. Upgrade only when you need more. No hidden fees, cancel anytime."
         />
 
-        <div className="mb-10 flex flex-wrap items-center justify-center gap-3">
+        {/* Launch Price Urgency Announcement Banner */}
+        <div className="mx-auto mt-6 mb-8 max-w-2xl rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3.5 sm:p-4 text-center shadow-2xs">
+          <div className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400">
+            <span>🚀 Early Bird Launch Pricing — Price Increasing Soon!</span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+            Lock in your launch subscription before rates increase to standard: Starter @ ₹1,499/yr · Cloud SaaS @ ₹3,499/yr · Private Cloud @ ₹4,999/yr (Lifetime @ ₹14,999).
+          </p>
+        </div>
+
+        <div className="mb-8 sm:mb-10 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3">
           <div
             role="group"
             aria-label="Billing cycle"
@@ -45,7 +61,7 @@ export function Pricing() {
                 onClick={() => setBilling(c)}
                 aria-pressed={billing === c}
                 className={cn(
-                  'rounded-[4px] px-4 py-1.5 text-sm font-medium capitalize transition-colors',
+                  'rounded-[4px] px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium capitalize transition-colors',
                   billing === c ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -53,7 +69,7 @@ export function Pricing() {
               </button>
             ))}
           </div>
-          <Badge variant="outline" className="border-accent/40 bg-accent-soft font-mono text-[11px] text-accent">
+          <Badge variant="outline" className="border-accent/40 bg-accent-soft font-mono text-[10px] sm:text-[11px] text-accent">
             Save up to 20% yearly
           </Badge>
         </div>
@@ -67,9 +83,20 @@ export function Pricing() {
                 <PlanCard key={plan.id} plan={plan} billing={billing} />
               ))}
             </div>
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              7-day free trial · No credit card required · Cancel anytime
-            </p>
+
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                7-day free trial · No credit card required · Cancel anytime
+              </p>
+              <span className="hidden sm:inline text-muted-foreground/40">•</span>
+              <Link
+                to="/pricing"
+                className="text-xs sm:text-sm font-semibold text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Customize Seats &amp; Add-ons in Interactive Pricing Cart →
+              </Link>
+            </div>
+
             <ComparisonTable plans={plans} />
           </>
         )}
@@ -82,6 +109,8 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
   const highlighted = plan.id === 'plan_private_cloud'
   const isLifetimeOnly = plan.price_lifetime_inr != null && plan.price_monthly_inr == null
   const isCustom = plan.price_monthly_inr == null && plan.price_yearly_inr == null && plan.price_lifetime_inr == null
+
+  const regularYearlyPrice = REGULAR_YEARLY_PRICES[plan.id]
 
   let priceLabel = 'Custom'
   let priceSuffix = ''
@@ -113,7 +142,20 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
         ) : null}
       </div>
       <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>
-      <div className="mt-4 flex items-baseline gap-1.5">
+
+      {/* Strikethrough Regular Price for Launch Offer */}
+      {billing === 'yearly' && regularYearlyPrice && plan.price_yearly_inr != null && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-xs text-muted-foreground line-through">
+            {formatInr(regularYearlyPrice)}/yr regular
+          </span>
+          <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-[10px] px-1.5 py-0">
+            Launch Rate: {formatInr(plan.price_yearly_inr)}/yr
+          </Badge>
+        </div>
+      )}
+
+      <div className="mt-2 flex items-baseline gap-1.5">
         <span className="tabular font-display text-3xl font-semibold">{isCustom ? 'Custom' : priceLabel}</span>
         {!isCustom && <span className="text-xs text-muted-foreground">{priceSuffix}</span>}
       </div>
@@ -142,7 +184,7 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
 
 const FEATURE_ROWS: { key: string; label: string; render: (plan: SubscriptionPlan) => ReactNode }[] = [
   { key: 'users', label: 'Users', render: (p) => formatLimit(p.user_limit) },
-  { key: 'crm', label: 'Built-in mini CRM', render: (p) => <FlagCell value={p.feature_flags?.crm} /> },
+  { key: 'crm', label: 'Built-in CRM', render: (p) => <FlagCell value={p.feature_flags?.crm} /> },
   {
     key: 'automated_reminders',
     label: 'Automated reminders',
@@ -180,15 +222,18 @@ function FlagCell({ value }: { value: unknown }) {
 
 function ComparisonTable({ plans }: { plans: SubscriptionPlan[] }) {
   return (
-    <div className="mt-14">
-      <h3 className="mb-5 text-center text-lg font-semibold">Compare all plans side by side</h3>
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[640px] border-collapse text-sm">
+    <div className="mt-10 sm:mt-14">
+      <h3 className="mb-2 text-center text-base sm:text-lg font-semibold">Compare all plans side by side</h3>
+      <p className="mb-4 text-center text-xs text-muted-foreground sm:hidden flex items-center justify-center gap-1">
+        <span>← Swipe horizontally to compare plans →</span>
+      </p>
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-xs">
+        <table className="w-full min-w-[560px] border-collapse text-xs sm:text-sm">
           <thead>
-            <tr className="border-b border-border">
-              <th className="p-3.5 text-left font-medium text-muted-foreground">Feature</th>
+            <tr className="border-b border-border bg-surface-muted/50">
+              <th className="p-3 sm:p-3.5 text-left font-medium text-muted-foreground">Feature</th>
               {plans.map((p) => (
-                <th key={p.id} className="p-3.5 text-center font-semibold">
+                <th key={p.id} className="p-3 sm:p-3.5 text-center font-semibold">
                   {p.name}
                 </th>
               ))}
@@ -196,10 +241,10 @@ function ComparisonTable({ plans }: { plans: SubscriptionPlan[] }) {
           </thead>
           <tbody>
             {FEATURE_ROWS.map((row) => (
-              <tr key={row.key} className="border-b border-border last:border-0">
-                <td className="p-3.5 text-muted-foreground">{row.label}</td>
+              <tr key={row.key} className="border-b border-border last:border-0 hover:bg-surface-muted/30">
+                <td className="p-3 sm:p-3.5 text-muted-foreground font-medium">{row.label}</td>
                 {plans.map((p) => (
-                  <td key={p.id} className="tabular p-3.5 text-center">
+                  <td key={p.id} className="tabular p-3 sm:p-3.5 text-center">
                     {row.render(p)}
                   </td>
                 ))}

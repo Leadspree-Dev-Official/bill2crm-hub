@@ -26,7 +26,7 @@ const PILLARS: Pillar[] = [
     mock: <PosMock />,
   },
   {
-    eyebrow: 'Mini CRM & Follow-ups',
+    eyebrow: 'CRM & Follow-ups',
     title: 'Every lead and customer, followed up automatically',
     desc: 'A unified customer database with notes, tags and reminders — so payment and lead follow-ups happen on WhatsApp without you remembering to send them.',
     bullets: ['Auto-tagging: VIP, wholesale, repeat', 'Full transaction & interaction history', 'One-click CSV import & export'],
@@ -57,33 +57,33 @@ const PILLARS: Pillar[] = [
 
 export function FeaturePillars() {
   return (
-    <section id="features" className="relative border-b border-border px-5 py-20">
+    <section id="features" className="relative border-b border-border px-4 py-12 sm:px-5 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-6xl">
         <SectionHead
           eyebrow="Everything to bill & grow"
           title="Six modules. One synced business."
           desc="Every part of Bill2CRM shares the same customer, product and ledger data — nothing to export, import, or reconcile between tools."
         />
-        <div className="space-y-16">
+        <div className="space-y-12 sm:space-y-16">
           {PILLARS.map((pillar, i) => (
             <div
               key={pillar.title}
-              className={`grid items-center gap-10 lg:grid-cols-2 ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}
+              className={`grid items-center gap-6 sm:gap-10 lg:grid-cols-2 ${i % 2 === 1 ? 'lg:[&>*:first-child]:order-2' : ''}`}
             >
               <div>
                 <p className="eyebrow">{pillar.eyebrow}</p>
-                <h3 className="mt-2 text-2xl font-semibold">{pillar.title}</h3>
-                <p className="mt-3 text-muted-foreground">{pillar.desc}</p>
+                <h3 className="mt-2 text-xl sm:text-2xl font-semibold">{pillar.title}</h3>
+                <p className="mt-2.5 sm:mt-3 text-sm sm:text-base text-muted-foreground">{pillar.desc}</p>
                 <ul className="mt-4 space-y-2">
                   {pillar.bullets.map((b) => (
-                    <li key={b} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className="mt-0.5 size-4 shrink-0 text-accent" />
+                    <li key={b} className="flex items-start gap-2 text-xs sm:text-sm text-muted-foreground">
+                      <Check className="mt-0.5 size-3.5 sm:size-4 shrink-0 text-accent" />
                       {b}
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="rounded-lg border border-border bg-surface p-5">{pillar.mock}</div>
+              <div className="rounded-lg border border-border bg-surface p-3.5 sm:p-5 shadow-xs">{pillar.mock}</div>
             </div>
           ))}
         </div>

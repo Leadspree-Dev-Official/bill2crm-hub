@@ -1,4 +1,4 @@
-export type TenantStatus = 'trial' | 'active' | 'free' | 'past_due' | 'suspended' | 'cancelled'
+export type TenantStatus = 'trial' | 'active' | 'free' | 'past_due' | 'paused' | 'suspended' | 'cancelled'
 export type BillingCycle = 'monthly' | 'yearly' | 'lifetime'
 export type UpgradeRequestStatus = 'pending' | 'contacted' | 'resolved' | 'dismissed'
 /** 'whatsapp' is the only channel that actually grants access today (manually, by a super
@@ -16,6 +16,7 @@ export interface Tenant {
   /** Which Web App deployment "Launch my app" and entitlement sync point at. Stamped with
    *  the default app_target at signup time; null means "reset to whatever is default now". */
   app_target_id: string | null
+  last_activity_at?: string
   created_at: string
   updated_at: string
 }
@@ -123,6 +124,13 @@ export interface UpgradeRequest {
   created_at: string
 }
 
+export interface TenantActivity {
+  email: string | null
+  webAppLastSignInAt: string | null
+  controlPlaneLastSignInAt: string | null
+  webAppExists: boolean
+}
+
 /** Joined view used across the dashboard and admin console. */
 export interface TenantWithSubscription extends Tenant {
   tenant_subscriptions: TenantSubscription | null
@@ -131,6 +139,7 @@ export interface TenantWithSubscription extends Tenant {
 /** Adds the assigned app link's label and URL, for the /admin → Tenants list. */
 export interface TenantWithDetails extends TenantWithSubscription {
   app_target: Pick<AppTarget, 'id' | 'label' | 'app_base_url'> | null
+  activity?: TenantActivity
 }
 
 /** Joined view used by the admin "Upgrade requests" queue. */

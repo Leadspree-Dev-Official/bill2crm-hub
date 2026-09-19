@@ -21,7 +21,7 @@ const POINTS = [
 
 export function DataOwnership() {
   return (
-    <section className="relative border-b border-border px-5 py-20">
+    <section className="relative border-b border-border px-4 py-12 sm:px-5 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-5xl">
         <SectionHead
           eyebrow="Private Cloud"
@@ -30,11 +30,11 @@ export function DataOwnership() {
         />
         <div className="grid gap-4 sm:grid-cols-3">
           {POINTS.map((p) => (
-            <div key={p.title} className="rounded-lg border border-border bg-surface p-6">
-              <span className="grid size-11 place-items-center rounded-md bg-primary-soft text-primary">
+            <div key={p.title} className="rounded-lg border border-border bg-surface p-4 sm:p-6">
+              <span className="grid size-10 sm:size-11 place-items-center rounded-md bg-primary-soft text-primary">
                 <p.icon className="size-5" />
               </span>
-              <h3 className="mt-4 text-base font-semibold">{p.title}</h3>
+              <h3 className="mt-3.5 sm:mt-4 text-base font-semibold">{p.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>
             </div>
           ))}

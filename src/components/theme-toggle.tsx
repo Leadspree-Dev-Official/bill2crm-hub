@@ -1,48 +1,51 @@
-import { Monitor, Moon, Sun } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-type Theme = 'light' | 'dark'
-
-function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle('dark', theme === 'dark')
-  document.documentElement.style.colorScheme = theme
-}
-
 export function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme | null>(null)
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const stored = window.localStorage.getItem('b2c-theme') as Theme | null
-    const initial: Theme = stored ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-    setTheme(initial)
-    applyTheme(initial)
+    setMounted(true)
   }, [])
 
-  function toggle() {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark'
-    setTheme(next)
-    applyTheme(next)
-    window.localStorage.setItem('b2c-theme', next)
+  if (!mounted) {
+    return (
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Toggle colour theme"
+        className={cn('size-8 text-muted-foreground hover:text-foreground', className)}
+      >
+        <span className="size-4" />
+      </Button>
+    )
   }
+
+  const isDark = resolvedTheme === 'dark'
 
   return (
     <Button
       variant="ghost"
       size="icon"
-      onClick={toggle}
-      aria-label="Toggle colour theme"
-      className={cn('size-8 text-muted-foreground', className)}
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+      title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+      className={cn(
+        'size-8 text-muted-foreground hover:text-foreground hover:bg-surface-muted transition-colors',
+        className,
+      )}
     >
-      {theme === null ? (
-        <Monitor className="size-4" />
-      ) : theme === 'dark' ? (
-        <Sun className="size-4" />
+      {isDark ? (
+        <Sun className="size-4 text-amber-400 transition-transform rotate-0 scale-100" />
       ) : (
-        <Moon className="size-4" />
+        <Moon className="size-4 text-slate-700 transition-transform rotate-0 scale-100" />
       )}
     </Button>
   )
 }
+

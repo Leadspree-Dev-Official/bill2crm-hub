@@ -7,6 +7,7 @@ const STATUS_STYLES: Record<TenantStatus, string> = {
   active: 'border-accent/40 bg-accent/10 text-accent',
   free: 'border-border-strong bg-muted text-muted-foreground',
   past_due: 'border-warning/40 bg-warning/10 text-warning',
+  paused: 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400',
   suspended: 'border-destructive/40 bg-destructive/10 text-destructive',
   cancelled: 'border-destructive/40 bg-destructive/10 text-destructive',
 }

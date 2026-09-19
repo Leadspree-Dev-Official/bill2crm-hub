@@ -28,3 +28,35 @@ export function buildWhatsAppOrderLink(params: {
 
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
 }
+
+export function buildWhatsAppSupportLink(params: {
+  businessName: string
+  subdomainSlug: string
+  reason?: string
+}): string | null {
+  if (!WHATSAPP_NUMBER) return null
+
+  const message =
+    `Hi Admin! My Bill2CRM workspace "${params.businessName}" ` +
+    `(${params.subdomainSlug}.bill2crm.in) is ${params.reason || 'paused due to inactivity'}. ` +
+    `Please help resume/reactivate our workspace.`
+
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`
+}
+
+export function buildWhatsAppRenewalLink(params: {
+  businessName: string
+  kind: string
+  title: string
+  contactPhone?: string
+}): string | null {
+  const targetNumber = params.contactPhone || WHATSAPP_NUMBER
+  if (!targetNumber) return null
+
+  const message =
+    `Hello from Bill2CRM! Regarding your workspace "${params.businessName}": ` +
+    `${params.title}. Please let us know if you would like to renew or update your subscription.`
+
+  return `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
+}
+

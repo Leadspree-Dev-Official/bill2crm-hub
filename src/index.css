@@ -14,6 +14,12 @@
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-handwriting: "Caveat", cursive, sans-serif;
+
+  --color-saffron: #FF9933;
+  --color-saffron-vibrant: #FF6E14;
+  --color-bharat-green: #138808;
+  --color-bharat-green-light: #16a34a;
 
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
@@ -147,32 +153,30 @@ html:not(.dark) body:has(.app-canvas) {
 }
 
 .dark {
-  /* Dark pairings are tuned for the signed-in shell, where most text is 11-13px:
-   * secondary text clears 7:1 on cards, hairlines are visible against them, and
-   * the tinted status colours stay above 4.5:1 on their own 10% washes. */
-  --background: oklch(0.192 0.017 258);
-  --foreground: oklch(0.93 0.007 250);
-  --surface: oklch(0.245 0.019 258);
-  --surface-muted: oklch(0.282 0.02 258);
+  /* Rich midnight dark palette matching the Bill2CRM dark theme mockup */
+  --background: oklch(0.13 0.016 258);
+  --foreground: oklch(0.96 0.005 250);
+  --surface: oklch(0.17 0.018 258);
+  --surface-muted: oklch(0.21 0.019 258);
 
-  --card: oklch(0.245 0.019 258);
-  --card-foreground: oklch(0.93 0.007 250);
-  --popover: oklch(0.252 0.019 258);
-  --popover-foreground: oklch(0.93 0.007 250);
+  --card: oklch(0.17 0.018 258);
+  --card-foreground: oklch(0.96 0.005 250);
+  --popover: oklch(0.18 0.018 258);
+  --popover-foreground: oklch(0.96 0.005 250);
 
   --primary: oklch(0.705 0.128 250);
-  --primary-foreground: oklch(0.175 0.024 258);
-  --primary-soft: oklch(0.3 0.056 254);
+  --primary-foreground: oklch(0.14 0.02 258);
+  --primary-soft: oklch(0.26 0.045 254);
 
-  --secondary: oklch(0.3 0.019 258);
-  --secondary-foreground: oklch(0.93 0.008 250);
+  --secondary: oklch(0.22 0.018 258);
+  --secondary-foreground: oklch(0.94 0.008 250);
 
   --accent: oklch(0.715 0.09 158);
-  --accent-foreground: oklch(0.18 0.025 160);
-  --accent-soft: oklch(0.29 0.045 158);
+  --accent-foreground: oklch(0.14 0.025 160);
+  --accent-soft: oklch(0.24 0.045 158);
 
-  --muted: oklch(0.3 0.019 258);
-  --muted-foreground: oklch(0.762 0.014 258);
+  --muted: oklch(0.22 0.018 258);
+  --muted-foreground: oklch(0.72 0.014 258);
 
   --destructive: oklch(0.688 0.16 26);
   --destructive-foreground: oklch(0.18 0.03 26);
@@ -183,9 +187,9 @@ html:not(.dark) body:has(.app-canvas) {
   --success: oklch(0.715 0.09 158);
   --success-foreground: oklch(0.18 0.025 160);
 
-  --border: oklch(0.4 0.018 258);
-  --border-strong: oklch(0.505 0.02 258);
-  --input: oklch(0.505 0.018 258);
+  --border: oklch(0.28 0.018 258);
+  --border-strong: oklch(0.38 0.02 258);
+  --input: oklch(0.28 0.018 258);
   --ring: oklch(0.705 0.128 250);
 
   --chart-1: oklch(0.705 0.128 250);

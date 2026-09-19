@@ -71,6 +71,36 @@ const EXPECTED = [
   // 20260915000000_auth_hardening.sql
   { kind: 'fn', name: 'grant_bootstrap_super_admin', since: '20260915000000',
     args: { p_user_id: NO_SUCH_ID, p_email: 'probe@example.invalid' } },
+
+  // 20260918020000_tenant_owner_email_backfill.sql
+  { kind: 'fn', name: 'admin_get_tenants_auth_overview', since: '20260918020000', args: {} },
+
+  // 20260918030000_inactivity_lifecycle.sql
+  { kind: 'fn', name: 'admin_resume_tenant', since: '20260918030000', args: { p_tenant_id: NO_SUCH_ID } },
+
+  // 20260918100000_billing_core.sql
+  { kind: 'tb', name: 'billing_config', since: '20260918100000' },
+  { kind: 'tb', name: 'billing_customers', since: '20260918100000' },
+  { kind: 'tb', name: 'plan_gateway_map', since: '20260918100000' },
+  { kind: 'tb', name: 'billing_subscriptions', since: '20260918100000' },
+  { kind: 'tb', name: 'billing_orders', since: '20260918100000' },
+  { kind: 'tb', name: 'billing_payments', since: '20260918100000' },
+  { kind: 'tb', name: 'billing_events', since: '20260918100000' },
+  { kind: 'tb', name: 'billing_notifications', since: '20260918100000' },
+
+  // 20260918110000_billing_rpcs.sql
+  { kind: 'fn', name: 'billing_advance_period', args: { p_cycle: 'monthly', p_from: '2026-01-01T00:00:00Z' }, since: '20260918110000' },
+  { kind: 'fn', name: 'billing_plan_price_paise', args: { p_plan_id: 'plan_starter', p_cycle: 'monthly' }, since: '20260918110000' },
+  { kind: 'fn', name: 'billing_tax_paise', args: { p_base_paise: 1000 }, since: '20260918110000' },
+  { kind: 'fn', name: 'billing_apply_payment', args: { p_tenant_id: NO_SUCH_ID, p_plan_id: 'plan_starter', p_billing_cycle: 'monthly', p_amount_paise: 1000 }, since: '20260918110000' },
+  { kind: 'fn', name: 'admin_record_manual_payment', args: { p_tenant_id: NO_SUCH_ID, p_plan_id: 'plan_starter', p_billing_cycle: 'monthly', p_method: 'cash' }, since: '20260918110000' },
+  { kind: 'fn', name: 'admin_grant_beta_access', args: { p_tenant_id: NO_SUCH_ID, p_plan_id: 'plan_starter', p_days: 30 }, since: '20260918110000' },
+  { kind: 'fn', name: 'admin_set_plan_gateway_map', args: { p_plan_id: 'plan_starter', p_billing_cycle: 'monthly', p_razorpay_plan_id: 'plan_test' }, since: '20260918110000' },
+  { kind: 'fn', name: 'admin_delete_plan_gateway_map', args: { p_plan_id: 'plan_starter', p_billing_cycle: 'monthly' }, since: '20260918110000' },
+  { kind: 'fn', name: 'admin_update_billing_config', args: {}, since: '20260918110000' },
+  { kind: 'fn', name: 'admin_cancel_subscription', args: { p_tenant_id: NO_SUCH_ID }, since: '20260918110000' },
+  { kind: 'fn', name: 'acknowledge_billing_notification', args: { p_id: NO_SUCH_ID }, since: '20260918110000' },
+  { kind: 'fn', name: 'admin_billing_summary', args: {}, since: '20260918110000' },
 ]
 
 async function probe(obj) {
