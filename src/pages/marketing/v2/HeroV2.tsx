@@ -373,31 +373,31 @@ export function HeroV2() {
                         {/* Main Dashboard Canvas */}
                         <div className="flex-1 p-3">
                           {/* 4 Metric KPI Cards */}
-                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            <div className="rounded-lg border border-border/80 bg-surface p-2">
-                              <div className="text-[9px] text-muted-foreground">Total Sales</div>
-                              <div className="font-display font-bold text-xs sm:text-sm text-foreground">
-                                ₹ 12,48,230
+                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 sm:gap-2">
+                            <div className="rounded-lg border border-border/80 bg-surface p-1.5 sm:p-2 min-w-0">
+                              <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate">Total Sales</div>
+                              <div className="font-display font-bold text-[10px] sm:text-xs xl:text-sm text-foreground truncate tabular-nums">
+                                ₹12,48,230
                               </div>
-                              <div className="text-[9px] font-semibold text-[#138808] dark:text-[#16a34a]">↑ 12%</div>
+                              <div className="text-[8px] sm:text-[9px] font-semibold text-[#138808] dark:text-[#16a34a]">↑ 12%</div>
                             </div>
 
-                            <div className="rounded-lg border border-border/80 bg-surface p-2">
-                              <div className="text-[9px] text-muted-foreground">Total Invoices</div>
-                              <div className="font-display font-bold text-xs sm:text-sm text-foreground">324</div>
-                              <div className="text-[9px] font-semibold text-[#138808] dark:text-[#16a34a]">↑ 8%</div>
+                            <div className="rounded-lg border border-border/80 bg-surface p-1.5 sm:p-2 min-w-0">
+                              <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate">Total Invoices</div>
+                              <div className="font-display font-bold text-[10px] sm:text-xs xl:text-sm text-foreground truncate tabular-nums">324</div>
+                              <div className="text-[8px] sm:text-[9px] font-semibold text-[#138808] dark:text-[#16a34a]">↑ 8%</div>
                             </div>
 
-                            <div className="rounded-lg border border-border/80 bg-surface p-2">
-                              <div className="text-[9px] text-muted-foreground">Active Customers</div>
-                              <div className="font-display font-bold text-xs sm:text-sm text-foreground">1,245</div>
-                              <div className="text-[9px] font-semibold text-[#138808] dark:text-[#16a34a]">↑ 18%</div>
+                            <div className="rounded-lg border border-border/80 bg-surface p-1.5 sm:p-2 min-w-0">
+                              <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate">Active Customers</div>
+                              <div className="font-display font-bold text-[10px] sm:text-xs xl:text-sm text-foreground truncate tabular-nums">1,245</div>
+                              <div className="text-[8px] sm:text-[9px] font-semibold text-[#138808] dark:text-[#16a34a]">↑ 18%</div>
                             </div>
 
-                            <div className="rounded-lg border border-border/80 bg-surface p-2">
-                              <div className="text-[9px] text-muted-foreground">Pending Items</div>
-                              <div className="font-display font-bold text-xs sm:text-sm text-foreground">12</div>
-                              <div className="text-[9px] font-semibold text-rose-500">↓ 4%</div>
+                            <div className="rounded-lg border border-border/80 bg-surface p-1.5 sm:p-2 min-w-0">
+                              <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate">Pending Items</div>
+                              <div className="font-display font-bold text-[10px] sm:text-xs xl:text-sm text-foreground truncate tabular-nums">12</div>
+                              <div className="text-[8px] sm:text-[9px] font-semibold text-rose-500">↓ 4%</div>
                             </div>
                           </div>
 
