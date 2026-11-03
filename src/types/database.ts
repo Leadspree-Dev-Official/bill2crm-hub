@@ -129,6 +129,8 @@ export interface TenantActivity {
   webAppLastSignInAt: string | null
   controlPlaneLastSignInAt: string | null
   webAppExists: boolean
+  activeUsers?: number
+  totalMembers?: number
 }
 
 /** Joined view used across the dashboard and admin console. */

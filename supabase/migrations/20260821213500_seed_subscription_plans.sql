@@ -36,7 +36,7 @@ values
    '{"crm": true, "automated_reminders": true, "doc_vault_limit": 50, "priority_support": false}'::jsonb,
    true, 5),
 
-  ('plan_custom', 'Custom', 'Built around you — contact for a quote', null, null, null,
+  ('plan_custom', 'Enterprise (Custom)', 'Built around you — contact for a quote', null, null, null,
    null, null,
    '{"crm": true, "automated_reminders": true, "doc_vault_limit": null, "priority_support": true, "custom_website": true}'::jsonb,
    true, 6)

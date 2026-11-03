@@ -8,7 +8,7 @@ import { AuthLayout } from '@/components/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 const schema = z.object({
   email: z.string().email('Enter a valid email'),
@@ -22,6 +22,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -81,7 +82,26 @@ export default function LoginPage() {
                   </Link>
                 </div>
                 <FormControl>
-                  <Input type="password" autoComplete="current-password" {...field} />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      className="pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="size-4" aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>

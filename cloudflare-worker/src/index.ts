@@ -9,7 +9,7 @@
  */
 
 export interface Env {
-  WEB_APP_ORIGIN: string // e.g. "https://bill2crm-web-app.netlify.app"
+  WEB_APP_ORIGIN: string // e.g. "https://bill2crm.leadspree.in"
 }
 
 export default {

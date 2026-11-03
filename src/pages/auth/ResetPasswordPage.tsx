@@ -10,7 +10,7 @@ import { AuthLayout } from '@/components/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { Eye, EyeOff, Loader2, ShieldAlert } from 'lucide-react'
 
 const schema = z
   .object({
@@ -31,6 +31,8 @@ export default function ResetPasswordPage() {
   const { isPasswordRecovery } = useAuth()
   const [status, setStatus] = useState<Status>('checking')
   const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -145,7 +147,26 @@ export default function ResetPasswordPage() {
                 <FormItem>
                   <FormLabel>New password</FormLabel>
                   <FormControl>
-                    <Input type="password" autoComplete="new-password" {...field} />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        className="pr-10"
+                        {...field}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="size-4" aria-hidden="true" />
+                        ) : (
+                          <Eye className="size-4" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -158,7 +179,26 @@ export default function ResetPasswordPage() {
                 <FormItem>
                   <FormLabel>Confirm new password</FormLabel>
                   <FormControl>
-                    <Input type="password" autoComplete="new-password" {...field} />
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        className="pr-10"
+                        {...field}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="size-4" aria-hidden="true" />
+                        ) : (
+                          <Eye className="size-4" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

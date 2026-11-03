@@ -187,7 +187,7 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <AdminPageHeader
         title="Billing & Revenue"
         description="Razorpay gateway transactions, renewal follow-up queue, offline cash grants, and dunning enforcement."
@@ -302,67 +302,58 @@ export default function BillingPage() {
         }
       />
 
-      {/* Overview Metric Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="p-4 pb-1">
-            <CardDescription className="flex items-center justify-between text-xs font-medium">
-              <span>Collected (Last 30d)</span>
-              <IndianRupee className="size-4 text-emerald-600" />
-            </CardDescription>
-            <CardTitle className="text-2xl font-bold">
-              {summary ? formatPaise(summary.collected_30d_paise) : '₹0'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
-            Gateway: {summary ? formatPaise(summary.gateway_30d_paise) : '₹0'} • Offline:{' '}
-            {summary ? formatPaise(summary.offline_30d_paise) : '₹0'}
-          </CardContent>
+      {/* Overview Metric Cards (Compact) */}
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <Card className="p-3">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Collected (Last 30d)</span>
+            <IndianRupee className="size-3.5 text-emerald-600" />
+          </div>
+          <div className="mt-1 text-xl font-bold tracking-tight text-foreground">
+            {summary ? formatPaise(summary.collected_30d_paise) : '₹0'}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+            Gateway: {summary ? formatPaise(summary.gateway_30d_paise) : '₹0'} • Offline: {summary ? formatPaise(summary.offline_30d_paise) : '₹0'}
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="p-4 pb-1">
-            <CardDescription className="flex items-center justify-between text-xs font-medium">
-              <span>Total Revenue</span>
-              <DollarSign className="size-4 text-primary" />
-            </CardDescription>
-            <CardTitle className="text-2xl font-bold">
-              {summary ? formatPaise(summary.collected_total_paise) : '₹0'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
+        <Card className="p-3">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Total Revenue</span>
+            <DollarSign className="size-3.5 text-primary" />
+          </div>
+          <div className="mt-1 text-xl font-bold tracking-tight text-foreground">
+            {summary ? formatPaise(summary.collected_total_paise) : '₹0'}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
             All captured gateway and offline payments
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="p-4 pb-1">
-            <CardDescription className="flex items-center justify-between text-xs font-medium">
-              <span>Active Subscriptions</span>
-              <Users className="size-4 text-sky-600" />
-            </CardDescription>
-            <CardTitle className="text-2xl font-bold">
-              {summary?.active_subscriptions ?? 0}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
+        <Card className="p-3">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Active Subscriptions</span>
+            <Users className="size-3.5 text-sky-600" />
+          </div>
+          <div className="mt-1 text-xl font-bold tracking-tight text-foreground">
+            {summary?.active_subscriptions ?? 0}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
             {summary?.beta_grants ?? 0} beta grants • {summary?.renewals_next_7d ?? 0} due in 7d
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="p-4 pb-1">
-            <CardDescription className="flex items-center justify-between text-xs font-medium">
-              <span>Past Due / Dunning</span>
-              <AlertTriangle className="size-4 text-amber-600" />
-            </CardDescription>
-            <CardTitle className="text-2xl font-bold">
-              {summary?.past_due_tenants ?? 0}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1 text-[11px] text-muted-foreground">
+        <Card className="p-3">
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <span>Past Due / Dunning</span>
+            <AlertTriangle className="size-3.5 text-amber-600" />
+          </div>
+          <div className="mt-1 text-xl font-bold tracking-tight text-foreground">
+            {summary?.past_due_tenants ?? 0}
+          </div>
+          <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
             {summary?.open_followups ?? 0} open renewal follow-ups
-          </CardContent>
+          </div>
         </Card>
       </div>
 

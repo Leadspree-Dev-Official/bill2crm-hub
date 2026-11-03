@@ -4,15 +4,11 @@ import { cn } from '@/lib/utils'
 
 export function BrandMark({ className }: { className?: string }) {
   return (
-    <span
-      className={cn(
-        'inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#138808] font-display font-bold text-white text-sm shadow-sm ring-1 ring-white/10',
-        className,
-      )}
-      aria-hidden
-    >
-      B2
-    </span>
+    <img
+      src="/logo.png"
+      alt="Bill2CRM Logo"
+      className={cn('size-8 shrink-0 object-contain drop-shadow-xs', className)}
+    />
   )
 }
 

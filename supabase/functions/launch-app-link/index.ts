@@ -84,7 +84,11 @@ Deno.serve(async (req) => {
       throw new Error(`Could not mint a sign-in link for ${redirectTo} — ${reason}`)
     }
 
-    await ownService.rpc('touch_tenant_activity', { p_tenant_id: tenant.id }).catch(() => {})
+    try {
+      await ownService.rpc('touch_tenant_activity', { p_tenant_id: tenant.id })
+    } catch {
+      // Best-effort activity tracking; do not block link minting if RPC fails
+    }
 
     return json({ url: data.properties.action_link, redirectTo })
   } catch (err) {

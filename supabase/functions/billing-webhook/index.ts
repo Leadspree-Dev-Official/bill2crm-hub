@@ -45,7 +45,19 @@ Deno.serve(async (req) => {
 
   const eventType: string = eventPayload.event || 'unknown'
   if (!eventId) {
-    eventId = `evt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    eventId =
+      eventPayload.event_id ||
+      eventPayload.id ||
+      (eventPayload.payload?.payment?.entity?.id
+        ? `${eventType}_${eventPayload.payload.payment.entity.id}`
+        : null) ||
+      (eventPayload.payload?.subscription?.entity?.id
+        ? `${eventType}_${eventPayload.payload.subscription.entity.id}`
+        : null) ||
+      (eventPayload.payload?.order?.entity?.id
+        ? `${eventType}_${eventPayload.payload.order.entity.id}`
+        : null) ||
+      `evt_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
   }
 
   // Idempotency: claim the event. If already claimed, return 200 without reprocessing.

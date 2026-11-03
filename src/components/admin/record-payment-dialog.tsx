@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { adminRecordManualPayment } from '@/lib/api/billing'
 import { triggerAuthRefresh } from '@/lib/auth-context'
@@ -33,15 +33,18 @@ const METHODS: { id: Method; label: string }[] = [
 
 export function RecordPaymentDialog({
   tenant,
+  tenants,
   open,
   onOpenChange,
   onSaved,
 }: {
   tenant: TenantWithDetails | null
+  tenants?: TenantWithDetails[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) {
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('')
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [planId, setPlanId] = useState('')
   const [cycle, setCycle] = useState<Cycle>('monthly')
@@ -51,9 +54,21 @@ export function RecordPaymentDialog({
   const [reference, setReference] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const initializedTenantRef = useRef<string | null>(null)
+
+  const activeTenant = tenant || (tenants?.find((t) => t.id === selectedTenantId) ?? null)
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      initializedTenantRef.current = null
+      return
+    }
+    if (tenant) {
+      setSelectedTenantId(tenant.id)
+    } else if (tenants && tenants.length > 0 && !selectedTenantId) {
+      setSelectedTenantId(tenants[0].id)
+    }
+
     supabase
       .from('subscription_plans')
       .select('*')
@@ -62,26 +77,32 @@ export function RecordPaymentDialog({
       .then(({ data }) => {
         const rows = (data as SubscriptionPlan[]) ?? []
         setPlans(rows)
-
-        const sub = tenant?.tenant_subscriptions
-        const initialPlanId = sub?.plan_id && sub.plan_id !== 'plan_free' ? sub.plan_id : rows[0]?.id ?? ''
-        const initialCycle: Cycle = (sub?.billing_cycle as Cycle) ?? 'monthly'
-        const initialMethod: Method = 'cash'
-
-        setPlanId(initialPlanId)
-        setCycle(initialCycle)
-        setMethod(initialMethod)
-
-        const initialPlan = rows.find((p) => p.id === initialPlanId)
-        let price = 0
-        if (initialPlan) {
-          if (initialCycle === 'monthly') price = initialPlan.price_monthly_inr ?? 0
-          else if (initialCycle === 'yearly') price = initialPlan.price_yearly_inr ?? 0
-          else if (initialCycle === 'lifetime') price = initialPlan.price_lifetime_inr ?? 0
-        }
-        setAmountInr(price ? price.toString() : '')
       })
-  }, [open, tenant])
+  }, [open, tenant, tenants, selectedTenantId])
+
+  useEffect(() => {
+    if (!open || !activeTenant || plans.length === 0) return
+    if (initializedTenantRef.current === activeTenant.id) return
+    initializedTenantRef.current = activeTenant.id
+
+    const sub = activeTenant.tenant_subscriptions
+    const initialPlanId = sub?.plan_id && sub.plan_id !== 'plan_free' ? sub.plan_id : plans[0]?.id ?? ''
+    const initialCycle: Cycle = (sub?.billing_cycle as Cycle) ?? 'monthly'
+    const initialMethod: Method = 'cash'
+
+    setPlanId(initialPlanId)
+    setCycle(initialCycle)
+    setMethod(initialMethod)
+
+    const initialPlan = plans.find((p) => p.id === initialPlanId)
+    let price = 0
+    if (initialPlan) {
+      if (initialCycle === 'monthly') price = initialPlan.price_monthly_inr ?? 0
+      else if (initialCycle === 'yearly') price = initialPlan.price_yearly_inr ?? 0
+      else if (initialCycle === 'lifetime') price = initialPlan.price_lifetime_inr ?? 0
+    }
+    setAmountInr(price ? price.toString() : '')
+  }, [open, activeTenant?.id, plans])
 
   function handleCycleChange(newCycle: Cycle) {
     setCycle(newCycle)
@@ -151,11 +172,11 @@ export function RecordPaymentDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!tenant || !planId) return
+    if (!activeTenant || !planId) return
 
     setSaving(true)
     const { error } = await adminRecordManualPayment({
-      tenantId: tenant.id,
+      tenantId: activeTenant.id,
       planId,
       billingCycle: cycle,
       method,
@@ -172,7 +193,7 @@ export function RecordPaymentDialog({
     }
 
     toast.success('Payment recorded & entitlement granted!', {
-      description: `Applied ${selectedPlan?.name || planId} (${cycle}) to ${tenant.business_name}. Sequential invoice issued.`,
+      description: `Applied ${selectedPlan?.name || planId} (${cycle}) to ${activeTenant.business_name}. Sequential invoice issued.`,
     })
 
     triggerAuthRefresh()
@@ -191,12 +212,31 @@ export function RecordPaymentDialog({
             <DialogTitle>Record Offline / Manual Payment</DialogTitle>
           </div>
           <DialogDescription>
-            Grant access for {tenant?.business_name} without Razorpay (Cash, direct UPI, or bank transfer). Generates a
+            Grant access for {activeTenant?.business_name ?? 'selected workspace'} without Razorpay (Cash, direct UPI, or bank transfer). Generates a
             sequential invoice and ledger entry.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!tenant && tenants && tenants.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Select Tenant / Workspace</Label>
+              <Select value={selectedTenantId} onValueChange={setSelectedTenantId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a tenant workspace..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {tenants.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <span className="font-medium">{t.business_name}</span>{' '}
+                      <span className="text-xs text-muted-foreground">({t.subdomain_slug})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Payment Method</Label>

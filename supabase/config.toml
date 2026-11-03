@@ -416,3 +416,6 @@ verify_jwt = true
 [functions.billing-webhook]
 verify_jwt = false
 
+[functions.admin-ai-management]
+verify_jwt = true
+

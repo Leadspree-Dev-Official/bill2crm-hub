@@ -112,19 +112,19 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
 
   const regularYearlyPrice = REGULAR_YEARLY_PRICES[plan.id]
 
-  let priceLabel = 'Custom'
+  let priceLabel = 'Enterprise (Custom)'
   let priceSuffix = ''
   if (isLifetimeOnly) {
-    priceLabel = formatInr(plan.price_lifetime_inr) ?? 'Custom'
+    priceLabel = formatInr(plan.price_lifetime_inr) ?? 'Enterprise (Custom)'
     priceSuffix = 'one-time'
   } else if (billing === 'monthly' && plan.price_monthly_inr != null) {
-    priceLabel = formatInr(plan.price_monthly_inr) ?? 'Custom'
+    priceLabel = formatInr(plan.price_monthly_inr) ?? 'Enterprise (Custom)'
     priceSuffix = '/month'
   } else if (billing === 'yearly' && plan.price_yearly_inr != null) {
-    priceLabel = formatInr(Math.round(plan.price_yearly_inr / 12)) ?? 'Custom'
+    priceLabel = formatInr(Math.round(plan.price_yearly_inr / 12)) ?? 'Enterprise (Custom)'
     priceSuffix = '/month, billed yearly'
   } else if (plan.price_monthly_inr != null) {
-    priceLabel = formatInr(plan.price_monthly_inr) ?? 'Custom'
+    priceLabel = formatInr(plan.price_monthly_inr) ?? 'Enterprise (Custom)'
     priceSuffix = '/month'
   }
 
@@ -156,7 +156,7 @@ function PlanCard({ plan, billing }: { plan: SubscriptionPlan; billing: BillingT
       )}
 
       <div className="mt-2 flex items-baseline gap-1.5">
-        <span className="tabular font-display text-3xl font-semibold">{isCustom ? 'Custom' : priceLabel}</span>
+        <span className="tabular font-display text-3xl font-semibold">{isCustom ? 'Enterprise (Custom)' : priceLabel}</span>
         {!isCustom && <span className="text-xs text-muted-foreground">{priceSuffix}</span>}
       </div>
       <ul className="mt-5 flex-1 space-y-2 text-sm text-muted-foreground">

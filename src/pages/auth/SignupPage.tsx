@@ -8,7 +8,7 @@ import { AuthLayout } from '@/components/auth-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
-import { Loader2, MailCheck } from 'lucide-react'
+import { Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 
 const schema = z.object({
   businessName: z.string().min(2, 'Enter your business name'),
@@ -35,6 +35,7 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [awaitingConfirmation, setAwaitingConfirmation] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -137,7 +138,26 @@ export default function SignupPage() {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" autoComplete="new-password" {...field} />
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        className="pr-10"
+                        {...field}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground transition-colors focus:outline-none flex items-center justify-center cursor-pointer"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="size-4" aria-hidden="true" />
+                        ) : (
+                          <Eye className="size-4" aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

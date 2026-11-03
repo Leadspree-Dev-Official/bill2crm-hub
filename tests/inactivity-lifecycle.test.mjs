@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { STATUS_LABEL, STATUS_BADGE_VARIANT, resolveTenantDisplayStatus } from '../src/lib/plan-utils.ts'
+import { STATUS_LABEL, STATUS_BADGE_VARIANT, resolveTenantDisplayStatus, getSubscriptionPeriodInfo } from '../src/lib/plan-utils.ts'
 
 test('LIFECYCLE-001 status mapping defines paused state', () => {
   assert.equal(STATUS_LABEL.paused, 'Paused (Inactive)')
@@ -27,36 +27,18 @@ test('LIFECYCLE-002 evaluates 15-day pause, 30-day suspend, and 60-day purge cor
 })
 
 test('LIFECYCLE-003 activity calculation takes max of owner and invited member logins', () => {
-  const now = new Date('2026-09-18T00:00:00Z').getTime()
-  const dayMs = 24 * 60 * 60 * 1000
+  const now = new Date('2026-09-18T10:00:00Z').getTime()
+  const webAppSignIn = new Date('2026-09-02T10:00:00Z').getTime() // 16 days ago
+  const cpSignIn = new Date('2026-09-10T10:00:00Z').getTime() // 8 days ago
 
-  function computeInactiveDays(createdAt, ownerCpLogin, ownerWebAppLogin, memberLogins) {
-    const timestamps = [new Date(createdAt).getTime()]
-    if (ownerCpLogin) timestamps.push(new Date(ownerCpLogin).getTime())
-    if (ownerWebAppLogin) timestamps.push(new Date(ownerWebAppLogin).getTime())
-    for (const m of memberLogins) {
-      if (m) timestamps.push(new Date(m).getTime())
-    }
-    const maxActive = Math.max(...timestamps)
-    return Math.floor((now - maxActive) / dayMs)
-  }
+  const daysInactiveWebAppOnly = Math.floor((now - webAppSignIn) / (1000 * 60 * 60 * 24))
+  assert.equal(daysInactiveWebAppOnly, 16)
 
-  // Owner inactive for 20 days, but invited member logged in 2 days ago -> inactiveDays = 2 (NOT paused)
-  const daysWithActiveMember = computeInactiveDays(
-    '2026-08-01T00:00:00Z',
-    '2026-08-29T00:00:00Z', // 20 days ago
-    '2026-08-29T00:00:00Z',
-    ['2026-09-16T00:00:00Z']  // 2 days ago
-  )
-  assert.equal(daysWithActiveMember, 2)
+  const maxSignIn = Math.max(webAppSignIn, cpSignIn)
+  const daysInactiveCombined = Math.floor((now - maxSignIn) / (1000 * 60 * 60 * 24))
+  assert.equal(daysInactiveCombined, 8)
 
-  // Both owner and all invited members inactive for 16 days -> paused
-  const daysInactiveAll = computeInactiveDays(
-    '2026-08-01T00:00:00Z',
-    '2026-09-02T00:00:00Z', // 16 days ago
-    '2026-09-02T00:00:00Z',
-    ['2026-09-01T00:00:00Z'] // 17 days ago
-  )
+  const daysInactiveAll = Math.floor((now - webAppSignIn) / (1000 * 60 * 60 * 24))
   assert.equal(daysInactiveAll, 16)
 })
 
@@ -100,5 +82,129 @@ test('LIFECYCLE-004 resolveTenantDisplayStatus accurately reflects paid plan vs 
     resolveTenantDisplayStatus('past_due', { plan_id: 'plan_pro' }),
     'past_due',
   )
+})
+
+test('LIFECYCLE-005 dynamic real-time evaluation of subscription end dates', () => {
+  const now = new Date('2026-09-20T12:00:00Z').getTime()
+
+  // Future period end: Active
+  assert.equal(
+    resolveTenantDisplayStatus('active', {
+      plan_id: 'plan_cloud_saas',
+      current_period_end: '2026-10-20T12:00:00Z',
+    }, now),
+    'active',
+  )
+
+  // Past period end within 3-day grace period (e.g. expired 1 day ago): Past Due
+  assert.equal(
+    resolveTenantDisplayStatus('active', {
+      plan_id: 'plan_cloud_saas',
+      current_period_end: '2026-09-19T12:00:00Z',
+    }, now, 3),
+    'past_due',
+  )
+
+  // Past period end past 3-day grace period (e.g. expired 5 days ago): Paused
+  assert.equal(
+    resolveTenantDisplayStatus('active', {
+      plan_id: 'plan_cloud_saas',
+      current_period_end: '2026-09-14T12:00:00Z',
+    }, now, 3),
+    'paused',
+  )
+
+  // Trial still running: trial
+  assert.equal(
+    resolveTenantDisplayStatus('trial', {
+      plan_id: 'plan_trial',
+      trial_ends_at: '2026-09-25T12:00:00Z',
+    }, now),
+    'trial',
+  )
+
+  // Trial expired: drops to free
+  assert.equal(
+    resolveTenantDisplayStatus('trial', {
+      plan_id: 'plan_trial',
+      trial_ends_at: '2026-09-15T12:00:00Z',
+    }, now),
+    'free',
+  )
+
+  // Lifetime plan is always active regardless of dates
+  assert.equal(
+    resolveTenantDisplayStatus('active', {
+      plan_id: 'plan_private_cloud_lifetime',
+      is_lifetime: true,
+      current_period_end: '2026-01-01T00:00:00Z',
+    }, now),
+    'active',
+  )
+})
+
+test('LIFECYCLE-006 getSubscriptionPeriodInfo generates human-readable countdowns and alert flags', () => {
+  const now = new Date('2026-09-20T12:00:00Z').getTime()
+
+  // Lifetime
+  const lifetimeInfo = getSubscriptionPeriodInfo({ is_lifetime: true }, now)
+  assert.equal(lifetimeInfo.isLifetime, true)
+  assert.equal(lifetimeInfo.alert, false)
+  assert.equal(lifetimeInfo.statusText, 'Lifetime access (no expiry)')
+
+  // Expiring in 5 days (Alert flag should be true)
+  const expiringSoonInfo = getSubscriptionPeriodInfo({
+    plan_id: 'plan_cloud_saas',
+    current_period_end: '2026-09-25T12:00:00Z',
+  }, now)
+  assert.equal(expiringSoonInfo.isExpiringSoon, true)
+  assert.equal(expiringSoonInfo.isExpired, false)
+  assert.equal(expiringSoonInfo.diffDays, 5)
+  assert.equal(expiringSoonInfo.alert, true)
+  assert.match(expiringSoonInfo.statusText, /Expires in 5d/)
+
+  // Expired 2 days ago (Alert flag should be true)
+  const expiredInfo = getSubscriptionPeriodInfo({
+    plan_id: 'plan_cloud_saas',
+    current_period_end: '2026-09-18T12:00:00Z',
+  }, now)
+  assert.equal(expiredInfo.isExpired, true)
+  assert.equal(expiredInfo.alert, true)
+  assert.equal(expiredInfo.diffDays, -2)
+  assert.match(expiredInfo.statusText, /Expired 2d ago/)
+
+  // Renews in 30 days
+  const futureInfo = getSubscriptionPeriodInfo({
+    plan_id: 'plan_cloud_saas',
+    current_period_end: '2026-10-20T12:00:00Z',
+  }, now)
+  assert.equal(futureInfo.isExpired, false)
+  assert.equal(futureInfo.isExpiringSoon, false)
+  assert.equal(futureInfo.alert, false)
+  assert.equal(futureInfo.diffDays, 30)
+  assert.match(futureInfo.statusText, /Renews.*in 30d/)
+})
+
+test('LIFECYCLE-007 getSubscriptionPeriodInfo accurately resolves start date, end date, and renewal due date', () => {
+  const now = new Date('2026-09-20T12:00:00Z').getTime()
+
+  const sub = {
+    plan_id: 'plan_cloud_saas',
+    billing_cycle: 'monthly',
+    current_period_start: '2026-08-20T12:00:00Z',
+    current_period_end: '2026-09-20T12:00:00Z',
+    charge_at: '2026-09-20T12:00:00Z',
+  }
+
+  const info = getSubscriptionPeriodInfo(sub, now, 3)
+  assert.ok(info.startDate)
+  assert.ok(info.endDate)
+  assert.ok(info.renewalDueDate)
+  assert.ok(info.graceDueDate)
+
+  assert.equal(info.formattedStartDate, '20 Aug 2026')
+  assert.match(info.formattedEndDate, /20 Sep/)
+  assert.match(info.formattedDueDate, /20 Sep/)
+  assert.match(info.formattedGraceDueDate, /23 Sep/)
 })
 

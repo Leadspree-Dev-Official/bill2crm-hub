@@ -178,9 +178,7 @@ export function Hero() {
                   {/* Dashboard Header Bar */}
                   <div className="flex items-center justify-between border-b border-border/80 bg-surface px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs">
                     <div className="flex items-center gap-1.5 sm:gap-2 font-display font-bold">
-                      <span className="grid size-4.5 sm:size-5 place-items-center rounded bg-[#138808] text-[9px] sm:text-[10px] text-white">
-                        B2
-                      </span>
+                      <img src="/logo.png" alt="Bill2CRM Logo" className="size-4.5 sm:size-5 object-contain" />
                       <span className="text-[11px] sm:text-xs font-semibold">Bill2CRM</span>
                     </div>
                     <div className="hidden items-center gap-1.5 rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground sm:flex">

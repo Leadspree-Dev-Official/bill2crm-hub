@@ -158,6 +158,27 @@ Deno.serve(async (req) => {
 
     await own.from('tenants').update({ web_app_org_id: orgId, web_app_email: email }).eq('id', tenantId)
 
+    // Ensure initial default AI credits exist for this tenant in tenant_data
+    try {
+      const creditKey = `tenant_${email}_api_credits`
+      const { data: existingCreditRow } = await webApp
+        .from('tenant_data')
+        .select('value')
+        .eq('key', creditKey)
+        .maybeSingle()
+
+      if (!existingCreditRow) {
+        await webApp.from('tenant_data').insert({
+          tenant_email: email,
+          key: creditKey,
+          value: '1000',
+          updated_at: new Date().toISOString(),
+        })
+      }
+    } catch (creditErr) {
+      console.warn('Could not seed initial AI credits:', creditErr)
+    }
+
     return new Response(JSON.stringify({ ok: true, orgId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

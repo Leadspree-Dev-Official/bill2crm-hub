@@ -23,16 +23,20 @@ import UpgradeRequestsPage from '@/pages/admin/UpgradeRequestsPage'
 import AppLinksPage from '@/pages/admin/AppLinksPage'
 import PlansPage from '@/pages/admin/PlansPage'
 import BillingPage from '@/pages/admin/BillingPage'
+import PaymentsReceivedPage from '@/pages/admin/PaymentsReceivedPage'
 import AuditLogPage from '@/pages/admin/AuditLogPage'
 import SuperAdminsPage from '@/pages/admin/SuperAdminsPage'
+import AiManagementPage from '@/pages/admin/AiManagementPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="b2c-theme">
       <BrowserRouter>
         <AuthProvider>
-        <Routes>
+          <ErrorBoundary>
+            <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/v2" element={<LandingPageV2 />} />
           <Route path="/features" element={<FeaturesPage />} />
@@ -69,9 +73,11 @@ export default function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<TenantsPage />} />
               <Route path="upgrade-requests" element={<UpgradeRequestsPage />} />
+              <Route path="payments-received" element={<PaymentsReceivedPage />} />
               <Route path="billing" element={<BillingPage />} />
               <Route path="app-links" element={<AppLinksPage />} />
               <Route path="plans" element={<PlansPage />} />
+              <Route path="ai-management" element={<AiManagementPage />} />
               <Route path="audit-log" element={<AuditLogPage />} />
               <Route path="super-admins" element={<SuperAdminsPage />} />
             </Route>
@@ -79,8 +85,9 @@ export default function App() {
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
-        <Toaster />
-      </AuthProvider>
+      </ErrorBoundary>
+      <Toaster />
+    </AuthProvider>
     </BrowserRouter>
     </ThemeProvider>
   )

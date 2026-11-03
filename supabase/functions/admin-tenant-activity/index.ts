@@ -9,6 +9,8 @@ export interface TenantActivityItem {
   controlPlaneLastSignInAt: string | null
   webAppLastSignInAt: string | null
   webAppExists: boolean
+  activeUsers?: number
+  totalMembers?: number
 }
 
 Deno.serve(async (req) => {
@@ -51,7 +53,7 @@ Deno.serve(async (req) => {
     // 1. Fetch control-plane tenant auth overview & tenant target mappings
     const [authOverviewResult, tenantsResult, targets] = await Promise.all([
       ownService.rpc('admin_get_tenants_auth_overview'),
-      ownService.from('tenants').select('id, app_target_id, web_app_email'),
+      ownService.from('tenants').select('id, app_target_id, web_app_email, web_app_org_id'),
       resolveAllAppTargets(ownService).catch(() => []),
     ])
 
@@ -67,26 +69,49 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 2. For each target, list users to match emails and last_sign_in_at
+    // 2. For each target, list users to match emails and last_sign_in_at, plus memberships
     const targetUserCache = new Map<string, Map<string, { lastSignInAt: string | null; id: string }>>()
+    const targetOrgMembersMap = new Map<string, Map<string, Array<{ userId: string; lastSignInAt: string | null }>>>()
 
     await Promise.all(
       targets.map(async (target) => {
         try {
           const targetClient = createClient(target.url, target.serviceRoleKey)
-          const { data, error } = await targetClient.auth.admin.listUsers({ page: 1, perPage: 1000 })
-          if (error || !data?.users) return
+          const [usersResult, membersResult] = await Promise.all([
+            targetClient.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+            targetClient.from('organization_memberships').select('organization_id, user_id'),
+          ])
+          if (!usersResult.data?.users) return
 
           const emailMap = new Map<string, { lastSignInAt: string | null; id: string }>()
-          for (const u of data.users) {
+          const userByIdMap = new Map<string, { lastSignInAt: string | null }>()
+          for (const u of usersResult.data.users) {
             if (u.email) {
               emailMap.set(u.email.toLowerCase(), {
                 lastSignInAt: u.last_sign_in_at ?? null,
                 id: u.id,
               })
             }
+            userByIdMap.set(u.id, {
+              lastSignInAt: u.last_sign_in_at ?? null,
+            })
           }
           targetUserCache.set(target.targetId, emailMap)
+
+          const orgMembers = new Map<string, Array<{ userId: string; lastSignInAt: string | null }>>()
+          for (const m of (membersResult.data ?? []) as Array<{ organization_id: string; user_id: string }>) {
+            const orgId = m.organization_id
+            const uid = m.user_id
+            const uInfo = userByIdMap.get(uid)
+            if (!orgMembers.has(orgId)) {
+              orgMembers.set(orgId, [])
+            }
+            orgMembers.get(orgId)!.push({
+              userId: uid,
+              lastSignInAt: uInfo?.lastSignInAt ?? null,
+            })
+          }
+          targetOrgMembersMap.set(target.targetId, orgMembers)
         } catch (err) {
           console.error(`Failed to fetch users from target ${target.label}:`, err)
         }
@@ -104,6 +129,7 @@ Deno.serve(async (req) => {
       id: string
       app_target_id: string | null
       web_app_email: string | null
+      web_app_org_id: string | null
     }>) {
       const authInfo = authMap.get(t.id)
       const email = authInfo?.email || t.web_app_email || null
@@ -111,6 +137,8 @@ Deno.serve(async (req) => {
 
       let webAppLastSignInAt: string | null = null
       let webAppExists = false
+      let activeUsers = 1
+      let totalMembers = 1
 
       if (targetId && email && targetUserCache.has(targetId)) {
         const usersInTarget = targetUserCache.get(targetId)!
@@ -121,11 +149,25 @@ Deno.serve(async (req) => {
         }
       }
 
+      if (targetId && t.web_app_org_id && targetOrgMembersMap.has(targetId)) {
+        const members = targetOrgMembersMap.get(targetId)!.get(t.web_app_org_id) ?? []
+        if (members.length > 0) {
+          totalMembers = members.length
+          const activeCount = members.filter((m) => m.lastSignInAt != null).length
+          activeUsers = Math.max(1, activeCount)
+        }
+      } else if (webAppExists) {
+        totalMembers = 1
+        activeUsers = 1
+      }
+
       activity[t.id] = {
         email,
         controlPlaneLastSignInAt: authInfo?.controlPlaneLastSignInAt ?? null,
         webAppLastSignInAt,
         webAppExists,
+        activeUsers,
+        totalMembers,
       }
     }
 

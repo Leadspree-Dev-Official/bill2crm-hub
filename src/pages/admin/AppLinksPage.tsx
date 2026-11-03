@@ -119,8 +119,8 @@ export default function AppLinksPage() {
     }
 
     const appBaseUrl = form.appBaseUrl.trim().replace(/\/+$/, '')
-    if (appBaseUrl && !/^https:\/\/[^/\s]+(\/\S*)?$/.test(appBaseUrl)) {
-      toast.error('App URL must be a full https:// address', { description: 'For example https://bill2crm.leadspree.in' })
+    if (appBaseUrl && !/^https?:\/\/[^/\s]+(\/\S*)?$/.test(appBaseUrl)) {
+      toast.error('App URL must be a valid URL', { description: 'For example https://bill2crm.leadspree.in or http://localhost:3000' })
       return
     }
 
@@ -281,12 +281,12 @@ export default function AppLinksPage() {
                       App URL <span className="font-normal text-muted-foreground">(where users land)</span>
                     </Label>
                     <Input
-                      placeholder="https://bill2crm.leadspree.in"
+                      placeholder="https://bill2crm.leadspree.in or https://bill2crm1.leadspree.in"
                       value={form.appBaseUrl}
                       onChange={(e) => setForm({ ...form, appBaseUrl: e.target.value })}
                     />
                     <p className="text-xs text-muted-foreground">
-                      The address "Launch my app" opens. Add it to this server's Supabase{' '}
+                      The address "Launch my app" opens (e.g. <span className="font-mono text-foreground">https://bill2crm.leadspree.in</span> or <span className="font-mono text-foreground">https://bill2crm1.leadspree.in</span>). Add it to this server&apos;s Supabase{' '}
                       <span className="font-medium text-foreground">Authentication → URL Configuration</span> redirect
                       allow-list too, or the magic link will bounce to its Site URL.
                     </p>
@@ -394,15 +394,20 @@ export default function AppLinksPage() {
 
                 return (
                   <TableRow key={target.target_id}>
-                    <TableCell className="font-medium">{target.label}</TableCell>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground">{target.supabase_url}</TableCell>
-                    <TableCell className="font-mono text-[11px]">
+                    <TableCell className="py-1.5 px-2.5 font-medium text-xs">{target.label}</TableCell>
+                    <TableCell className="py-1.5 px-2.5 font-mono text-[11px] text-muted-foreground">
+                      <span className="max-w-[150px] truncate block" title={target.supabase_url}>
+                        {target.supabase_url}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-1.5 px-2.5 font-mono text-[11px]">
                       {target.app_base_url ? (
                         <a
                           href={target.app_base_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-muted-foreground underline-offset-2 hover:underline"
+                          className="text-muted-foreground underline-offset-2 hover:underline max-w-[150px] truncate block"
+                          title={target.app_base_url}
                         >
                           {target.app_base_url}
                         </a>
@@ -412,12 +417,12 @@ export default function AppLinksPage() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal">
+                    <TableCell className="py-1.5 px-2.5">
+                      <Badge variant="outline" className="font-normal text-[10px] px-1.5 py-0">
                         {APP_TARGET_TIER_LABELS[target.tier]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="min-w-[150px]">
+                    <TableCell className="py-1.5 px-2.5 min-w-[130px]">
                       <div className="flex items-center gap-2">
                         <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                           <div
@@ -441,19 +446,19 @@ export default function AppLinksPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="tabular text-muted-foreground">{target.tenant_count}</TableCell>
-                    <TableCell>
+                    <TableCell className="py-1.5 px-2.5 tabular text-xs text-muted-foreground">{target.tenant_count}</TableCell>
+                    <TableCell className="py-1.5 px-2.5">
                       {isTesting ? (
                         <span className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
                           <Loader2 className="size-3 animate-spin" /> testing…
                         </span>
                       ) : health ? (
                         health.ok ? (
-                          <Badge variant="outline" className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          <Badge variant="outline" className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] px-1.5 py-0">
                             <CheckCircle2 className="size-3" /> {health.latencyMs}ms · Online
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="gap-1 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400" title={health.error ?? 'Error'}>
+                          <Badge variant="outline" className="gap-1 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] px-1.5 py-0" title={health.error ?? 'Error'}>
                             <XCircle className="size-3" /> Unreachable
                           </Badge>
                         )
@@ -461,14 +466,14 @@ export default function AppLinksPage() {
                         <span className="font-mono text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1.5 px-2.5">
                       {target.is_default && (
-                        <Badge className="gap-1 bg-primary-soft text-primary hover:bg-primary-soft">
+                        <Badge className="gap-1 bg-primary-soft text-primary hover:bg-primary-soft text-[10px] px-1.5 py-0">
                           <Star className="size-3" /> Default
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="py-1.5 px-2.5 text-right">
                       <div className="flex justify-end gap-1.5">
                         <Button
                           variant="outline"

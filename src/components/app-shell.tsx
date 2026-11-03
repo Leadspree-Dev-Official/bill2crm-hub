@@ -11,9 +11,11 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  ReceiptIndianRupee,
   ScrollText,
   Server,
   ShieldHalf,
+  Sparkles,
   TrendingUp,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -58,9 +60,11 @@ const workspaceNav: NavItem[] = [
 const controlPanelNav: NavItem[] = [
   { to: '/admin', label: 'Tenants', icon: Building2, end: true },
   { to: '/admin/upgrade-requests', label: 'Upgrade requests', icon: TrendingUp },
+  { to: '/admin/payments-received', label: 'Payments received', icon: ReceiptIndianRupee },
   { to: '/admin/billing', label: 'Billing & Revenue', icon: IndianRupee },
   { to: '/admin/app-links', label: 'App links', icon: Server },
   { to: '/admin/plans', label: 'Plans', icon: CreditCard },
+  { to: '/admin/ai-management', label: 'AI & Credits', icon: Sparkles },
 ]
 
 const governanceNav: NavItem[] = [
@@ -244,20 +248,33 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Button
                   asChild
                   size="sm"
-                  variant={tenant && resolveTenantDisplayStatus(tenant.status, subscription) === 'free' ? 'default' : 'outline'}
+                  variant={
+                    tenant &&
+                    (resolveTenantDisplayStatus(tenant.status, subscription) === 'free' ||
+                      resolveTenantDisplayStatus(tenant.status, subscription) === 'past_due')
+                      ? 'default'
+                      : 'outline'
+                  }
                   className={cn(
                     'hidden sm:inline-flex',
-                    tenant && resolveTenantDisplayStatus(tenant.status, subscription) === 'free' && 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs',
+                    tenant &&
+                      resolveTenantDisplayStatus(tenant.status, subscription) === 'free' &&
+                      'bg-amber-600 hover:bg-amber-700 text-white shadow-xs',
+                    tenant &&
+                      resolveTenantDisplayStatus(tenant.status, subscription) === 'past_due' &&
+                      'bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-xs',
                   )}
                 >
-                  <Link to="/dashboard/upgrade">Upgrade</Link>
+                  <Link to="/dashboard/upgrade">
+                    {tenant && resolveTenantDisplayStatus(tenant.status, subscription) === 'past_due' ? 'Renew Plan' : 'Upgrade'}
+                  </Link>
                 </Button>
               )}
               <ThemeToggle />
             </div>
           </header>
           {/* A div, not a <main>: SidebarInset already renders the <main> landmark. */}
-          <div className={`mx-auto w-full flex-1 px-5 py-8 ${inAdmin ? 'max-w-6xl' : 'max-w-5xl'}`}>{children}</div>
+          <div className={`w-full flex-1 ${inAdmin ? 'px-4 py-3' : 'mx-auto max-w-5xl px-5 py-8'}`}>{children}</div>
         </SidebarInset>
       </div>
     </SidebarProvider>

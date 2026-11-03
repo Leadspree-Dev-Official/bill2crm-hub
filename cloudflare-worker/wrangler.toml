@@ -12,4 +12,4 @@ routes = [
 # Fill in the actual Web App deployment origin (Netlify URL or the custom domain pointed at it)
 # before deploying. This can also be set as a Worker secret instead if you'd rather not commit it.
 [vars]
-WEB_APP_ORIGIN = "https://YOUR-WEB-APP-DEPLOYMENT.netlify.app"
+WEB_APP_ORIGIN = "https://bill2crm.leadspree.in"

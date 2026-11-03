@@ -322,9 +322,7 @@ export function HeroV2() {
                       {/* Dashboard Header Bar */}
                       <div className="flex items-center justify-between border-b border-border/80 bg-surface px-3 py-2 text-xs">
                         <div className="flex items-center gap-2 font-display font-bold">
-                          <span className="grid size-5 place-items-center rounded bg-[#138808] text-[10px] text-white">
-                            B2
-                          </span>
+                          <img src="/logo.png" alt="Bill2CRM Logo" className="size-5 object-contain" />
                           <span className="text-xs font-semibold">Bill2CRM</span>
                         </div>
                         <div className="hidden items-center gap-1.5 rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground sm:flex">

@@ -301,3 +301,145 @@ export async function triggerInactivityLifecycle(options?: { dryRun?: boolean; t
   return data ?? { ok: false, error: 'No response from lifecycle function' }
 }
 
+export interface AiProviderConfig {
+  id?: string
+  provider: 'gemini' | 'openai' | 'claude' | 'custom' | 'ollama' | 'ollama_local' | 'ollama_cloud'
+  name: string
+  apiKey: string
+  model: string
+  endpoint?: string
+  isActive: boolean
+  isPrimary?: boolean
+}
+
+export interface AdminAiConfig {
+  providers: AiProviderConfig[]
+  customPrompt: string
+  defaultCredits: number
+  creditMultiplier: number
+  targetsCount?: number
+}
+
+export interface TenantCreditItem {
+  id: string
+  businessName: string
+  slug: string
+  email: string
+  ownerName?: string
+  phone?: string
+  status: string
+  planName: string
+  targetId?: string
+  targetLabel: string
+  credits: number
+}
+
+export async function getAdminAiConfig(): Promise<{ config: AdminAiConfig | null; error: string | null }> {
+  const { data, error } = await supabase.functions.invoke<AdminAiConfig>('admin-ai-management', {
+    method: 'POST',
+    body: { action: 'get_ai_config' },
+  })
+  if (error) return { config: null, error: error.message }
+  return { config: data, error: null }
+}
+
+export async function saveAdminAiConfig(config: {
+  providers: AiProviderConfig[]
+  customPrompt: string
+  defaultCredits: number
+  creditMultiplier: number
+}): Promise<{ ok: boolean; targetsUpdated?: number; error: string | null }> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean; targetsUpdated?: number }>('admin-ai-management', {
+    method: 'POST',
+    body: {
+      action: 'save_ai_config',
+      ...config,
+    },
+  })
+  if (error) return { ok: false, error: error.message }
+  return { ok: Boolean(data?.ok), targetsUpdated: data?.targetsUpdated, error: null }
+}
+
+export async function listTenantAiCredits(): Promise<{ tenants: TenantCreditItem[]; error: string | null }> {
+  const { data, error } = await supabase.functions.invoke<{ tenants: TenantCreditItem[] }>('admin-ai-management', {
+    method: 'POST',
+    body: { action: 'list_tenant_credits' },
+  })
+  if (error) return { tenants: [], error: error.message }
+  return { tenants: data?.tenants ?? [], error: null }
+}
+
+export async function grantTenantAiCredits(params: {
+  tenantId: string
+  email?: string
+  targetId?: string
+  creditsDelta: number
+  setExplicit?: boolean
+  reason?: string
+}): Promise<{ ok: boolean; newCredits?: number; error: string | null }> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean; newCredits?: number }>('admin-ai-management', {
+    method: 'POST',
+    body: {
+      action: 'grant_tenant_credits',
+      ...params,
+    },
+  })
+  if (error) return { ok: false, error: error.message }
+  return { ok: Boolean(data?.ok), newCredits: data?.newCredits, error: null }
+}
+
+export interface PlanAiQuota {
+  planId: string
+  planName: string
+  monthlyCredits: number
+  rolloverEnabled: boolean
+  activeTenantsCount: number
+  description?: string
+  userLimit?: number | null
+  storageMb?: number | null
+  sortOrder?: number
+}
+
+export async function getPlanAiQuotas(): Promise<{ plans: PlanAiQuota[]; error: string | null }> {
+  const { data, error } = await supabase.functions.invoke<{ plans: PlanAiQuota[] }>('admin-ai-management', {
+    method: 'POST',
+    body: { action: 'get_plan_ai_quotas' },
+  })
+  if (error) return { plans: [], error: error.message }
+  return { plans: data?.plans ?? [], error: null }
+}
+
+export async function savePlanAiQuotas(
+  planQuotas: Array<{ planId: string; monthlyCredits: number; rolloverEnabled?: boolean }>
+): Promise<{ ok: boolean; targetsUpdated?: number; error: string | null }> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean; targetsUpdated?: number }>('admin-ai-management', {
+    method: 'POST',
+    body: {
+      action: 'save_plan_ai_quotas',
+      planQuotas,
+    },
+  })
+  if (error) return { ok: false, error: error.message }
+  return { ok: Boolean(data?.ok), targetsUpdated: data?.targetsUpdated, error: null }
+}
+
+export async function applyPlanQuotaToTenants(params: {
+  planId: string
+  quotaAmount: number
+}): Promise<{ ok: boolean; totalUpdated?: number; updatedEmails?: string[]; error: string | null }> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean; totalUpdated?: number; updatedEmails?: string[] }>(
+    'admin-ai-management',
+    {
+      method: 'POST',
+      body: {
+        action: 'apply_plan_quota_to_tenants',
+        ...params,
+      },
+    }
+  )
+  if (error) return { ok: false, error: error.message }
+  return { ok: Boolean(data?.ok), totalUpdated: data?.totalUpdated, updatedEmails: data?.updatedEmails, error: null }
+}
+
+
+

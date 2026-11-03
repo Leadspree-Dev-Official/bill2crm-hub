@@ -10,8 +10,8 @@ import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { daysRemaining, formatInr, formatLimit, resolveTenantDisplayStatus } from '@/lib/plan-utils'
-import { ArrowUpRight, AlertTriangle, Check, Copy, CreditCard, Loader2, MessageSquare, Receipt, Rocket, Sparkles, Users, Zap } from 'lucide-react'
+import { daysRemaining, formatInr, formatLimit, getSubscriptionPeriodInfo, resolveTenantDisplayStatus } from '@/lib/plan-utils'
+import { ArrowUpRight, AlertTriangle, Calendar, Check, Clock, Copy, CreditCard, Loader2, MessageSquare, Receipt, Rocket, Sparkles, Users, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import type { LucideIcon } from 'lucide-react'
 import { buildWhatsAppSupportLink } from '@/lib/whatsapp'
@@ -40,6 +40,11 @@ export default function DashboardPage() {
 
   const [billingNotifications, setBillingNotifications] = useState<BillingNotification[]>([])
   const [payments, setPayments] = useState<BillingPayment[]>([])
+  const [billingSub, setBillingSub] = useState<{
+    current_period_start?: string | null
+    current_period_end?: string | null
+    charge_at?: string | null
+  } | null>(null)
 
   useEffect(() => {
     if (!subscription?.plan_id) return
@@ -68,6 +73,15 @@ export default function DashboardPage() {
       .order('created_at', { ascending: false })
       .limit(5)
       .then(({ data }) => setPayments((data as BillingPayment[]) ?? []))
+
+    supabase
+      .from('billing_subscriptions')
+      .select('current_period_start, current_period_end, charge_at')
+      .eq('tenant_id', tenant.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setBillingSub(data ?? null))
   }, [tenant?.id])
 
   async function handleDismissNotification(id: string) {
@@ -290,16 +304,28 @@ export default function DashboardPage() {
   const isPaused = tenant.status === 'paused'
   const isSuspended = tenant.status === 'suspended'
   const isInactiveBlocked = isPaused || isSuspended
-  const displayStatus = resolveTenantDisplayStatus(tenant.status, subscription)
+  const periodInfo = getSubscriptionPeriodInfo(
+    {
+      ...subscription,
+      current_period_start: billingSub?.current_period_start || payments[0]?.period_start || subscription?.created_at,
+      charge_at: billingSub?.charge_at,
+    },
+    renderedAt,
+  )
+  const displayStatus = resolveTenantDisplayStatus(tenant.status, subscription, renderedAt)
+
+  const isPastDue = displayStatus === 'past_due' || tenant.status === 'past_due'
 
   const isPaid =
     Boolean(subscription?.is_lifetime) ||
     Boolean(subscription?.billing_cycle === 'lifetime') ||
     (Boolean(subscription?.plan_id && subscription.plan_id !== 'plan_free' && subscription.plan_id !== 'plan_trial') &&
-      subscription?.status === 'active')
+      !periodInfo.isExpired &&
+      displayStatus === 'active')
 
   const isTrialExpired =
     !isPaid &&
+    !isPastDue &&
     (displayStatus === 'free' ||
       subscription?.status === 'free' ||
       tenant.status === 'free' ||
@@ -313,6 +339,37 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
+      {isPastDue && (
+        <div className="mb-6 overflow-hidden rounded-lg border border-destructive/40 bg-gradient-to-r from-destructive/10 via-destructive/5 to-transparent p-5 text-destructive dark:text-red-300 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="rounded-full bg-destructive/20 p-2 text-destructive shrink-0 mt-0.5">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-semibold">Subscription Expired · Payment Past Due</h3>
+                  <Badge variant="outline" className="border-destructive/40 bg-destructive/10 text-destructive text-[10px] uppercase font-mono">
+                    Grace Period Active
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs leading-relaxed text-destructive/90 dark:text-red-300/90 max-w-2xl">
+                  {periodInfo.statusText}. Please renew your plan now to prevent workspace interruption and retain full functionality.
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 sm:self-center">
+              <Button asChild size="sm" className="w-full sm:w-auto gap-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-sm font-medium">
+                <Link to="/dashboard/upgrade">
+                  <CreditCard className="size-3.5" />
+                  Renew Subscription Now
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isTrialExpired && (
         <div className="mb-6 overflow-hidden rounded-lg border border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-5 text-amber-950 dark:text-amber-100 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -539,6 +596,76 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Key Subscription Dates: Start Date, End Date, Due Date for Renew */}
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-lg border border-border bg-surface-muted/60 p-3.5">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                <Calendar className="size-3.5 text-sky-500" />
+                <span>Subscription Start Date</span>
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                {periodInfo.formattedStartDate ?? '—'}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {isTrial ? 'Trial activated' : 'Subscription start'}
+              </p>
+            </div>
+
+            <div className="space-y-1 sm:border-l sm:border-border sm:pl-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                <Clock className="size-3.5 text-indigo-500" />
+                <span>Subscription End Date</span>
+              </div>
+              <p
+                className={`text-sm font-semibold ${
+                  periodInfo.isExpired
+                    ? 'text-destructive dark:text-red-400'
+                    : periodInfo.isExpiringSoon
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-foreground'
+                }`}
+              >
+                {subscription?.is_lifetime ? 'Lifetime' : periodInfo.formattedEndDate ?? 'No expiry'}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {subscription?.is_lifetime
+                  ? 'No expiration'
+                  : periodInfo.diffDays !== null
+                    ? periodInfo.diffDays < 0
+                      ? `Expired ${Math.abs(periodInfo.diffDays)}d ago`
+                      : periodInfo.diffDays === 0
+                        ? 'Expires today'
+                        : `${periodInfo.diffDays} days remaining`
+                    : 'Active plan'}
+              </p>
+            </div>
+
+            <div className="space-y-1 sm:border-l sm:border-border sm:pl-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                <CreditCard className="size-3.5 text-emerald-500" />
+                <span>Due Date for Renew</span>
+              </div>
+              <p
+                className={`text-sm font-semibold ${
+                  periodInfo.isExpired
+                    ? 'text-destructive dark:text-red-400'
+                    : periodInfo.isExpiringSoon
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-foreground'
+                }`}
+              >
+                {subscription?.is_lifetime ? 'None' : periodInfo.formattedDueDate ?? 'Upon renewal'}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {subscription?.is_lifetime
+                  ? 'Lifetime access'
+                  : periodInfo.isExpired
+                    ? `Grace ends: ${periodInfo.formattedGraceDueDate ?? '—'}`
+                    : 'Renewal deadline'}
+              </p>
+            </div>
+          </div>
+
           {isTrial && subscription?.trial_ends_at && trialDays !== 0 ? (
             <div className="mt-6 rounded-md border border-border bg-surface-muted p-4">
               <div className="flex items-baseline justify-between">
@@ -567,19 +694,39 @@ export default function DashboardPage() {
                 Upgrade to a paid monthly, yearly, or lifetime plan to remove counter and invoice limits and enable automated reminders.
               </p>
             </div>
+          ) : isPastDue ? (
+            <div className="mt-6 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-xs text-destructive dark:text-red-300">
+              <div className="flex items-center gap-2 font-medium">
+                <AlertTriangle className="size-4 text-destructive shrink-0" />
+                <span>Subscription Expired · {periodInfo.statusText}</span>
+              </div>
+              <p className="mt-1.5 text-[11px] opacity-90 leading-relaxed">
+                Your workspace is currently within the grace period. Renew your subscription now to maintain uninterrupted workspace access.
+              </p>
+            </div>
+          ) : periodInfo.isExpiringSoon ? (
+            <div className="mt-6 rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-900 dark:text-amber-200">
+              <div className="flex items-center gap-2 font-medium">
+                <Clock className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Renewal Approaching · {periodInfo.statusText}</span>
+              </div>
+              <p className="mt-1.5 text-[11px] text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
+                Your subscription period ends soon. Renew ahead of time to ensure continuous team access.
+              </p>
+            </div>
           ) : (
             <div className="mt-6 rounded-md border border-border bg-surface-muted p-4 text-sm text-muted-foreground">
               {subscription?.is_lifetime
-                ? 'Lifetime access — no renewal.'
-                : subscription?.current_period_end
-                  ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                ? 'Lifetime access — no renewal required.'
+                : periodInfo.formattedDate
+                  ? `Renews on ${periodInfo.formattedDate} (in ${periodInfo.diffDays ?? 0} days)`
                   : 'Plan is active.'}
             </div>
           )}
 
-          <Button asChild className="mt-5 w-full gap-1.5" variant={isTrial || isTrialExpired ? 'default' : 'outline'}>
+          <Button asChild className="mt-5 w-full gap-1.5" variant={isTrial || isTrialExpired || isPastDue ? 'default' : 'outline'}>
             <Link to="/dashboard/upgrade">
-              {isTrialExpired ? 'Upgrade Workspace' : isTrial ? 'Upgrade before the trial ends' : 'Change plan'}
+              {isPastDue ? 'Renew Subscription Now' : isTrialExpired ? 'Upgrade Workspace' : isTrial ? 'Upgrade before the trial ends' : 'Change plan'}
               <ArrowUpRight className="size-4" />
             </Link>
           </Button>
