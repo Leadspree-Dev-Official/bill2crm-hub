@@ -80,10 +80,10 @@
 :root {
   --radius: 0.375rem;
 
-  --background: oklch(0.986 0.003 95);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.235 0.019 258);
   --surface: oklch(1 0 0);
-  --surface-muted: oklch(0.965 0.005 95);
+  --surface-muted: oklch(0.978 0.003 258);
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.235 0.019 258);

@@ -21,7 +21,7 @@ export function Hero() {
   return (
     <section
       id="top"
-      className="relative overflow-hidden border-b border-border bg-gradient-to-b from-background via-background to-surface-muted/30 pb-8 pt-8 sm:pb-10 sm:pt-10 lg:pb-12 lg:pt-12"
+      className="relative overflow-hidden border-b border-border bg-background pb-8 pt-8 sm:pb-10 sm:pt-10 lg:pb-12 lg:pt-12"
     >
       <GridBackground />
 

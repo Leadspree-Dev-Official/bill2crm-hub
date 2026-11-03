@@ -25,7 +25,7 @@ export function HeroV2() {
   return (
     <section
       id="top"
-      className="relative overflow-hidden border-b border-border bg-gradient-to-b from-background via-background to-surface-muted/20 pb-6 pt-3 sm:pt-4 lg:pt-4"
+      className="relative overflow-hidden border-b border-border bg-background pb-6 pt-3 sm:pt-4 lg:pt-4"
     >
       {/* View Mode Toggle Pill (Top Right on Hero) */}
       <div className="mx-auto mb-3 flex max-w-7xl justify-end px-4 sm:px-5">
